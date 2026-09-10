@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/kwame-Owusu/lista/internal/models"
 )
@@ -46,4 +47,15 @@ func LoadTodos(filename string) ([]models.Todo, error) {
 	}
 
 	return todos, nil
+}
+
+// BackupCorruptFile moves an unreadable data file aside before the app
+// continues, so the next save doesn't silently overwrite it. The caller's
+// data is preserved under the returned path for manual recovery.
+func BackupCorruptFile(filename string) (string, error) {
+	backup := fmt.Sprintf("%s.corrupt-%s", filename, time.Now().Format("20060102-150405"))
+	if err := os.Rename(filename, backup); err != nil {
+		return "", fmt.Errorf("backing up corrupt data file: %w", err)
+	}
+	return backup, nil
 }
