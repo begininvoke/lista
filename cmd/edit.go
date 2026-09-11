@@ -20,11 +20,15 @@ func editTodoTitle(cmd *cobra.Command, args []string) {
 	id, err := strconv.Atoi(args[0])
 	if err != nil {
 		fmt.Printf("Error occurred converting id to int: %s\n", err)
+		return
 	}
+
 	editTitle := strings.Join(args[1:], " ")
 	err = todoList.Edit(id, editTitle)
 	if err != nil {
 		fmt.Printf("Error editing todo with id: %d, and string: %s, %s\n", id, editTitle, err)
+		return
 	}
+
 	saveTodos()
 }
