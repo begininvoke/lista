@@ -130,17 +130,6 @@ func InitStyles(theme config.Theme) {
 		Foreground(fgMain).
 		Bold(true)
 
-	highPriorityText = lipgloss.NewStyle().
-		Foreground(priorityHigh).
-		Bold(true)
-
-	mediumPriorityText = lipgloss.NewStyle().
-		Foreground(priorityMedium).
-		Bold(true)
-
-	lowPriorityText = lipgloss.NewStyle().
-		Foreground(priorityLow).Bold(true)
-
 	completedText = lipgloss.NewStyle().
 		Foreground(fgMuted).
 		Strikethrough(true)

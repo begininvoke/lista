@@ -17,6 +17,7 @@ var listCmd = &cobra.Command{
 }
 
 func listTodos(cmd *cobra.Command, args []string) {
+	loadStyles()
 	todos := todoList.List()
 
 	sort.Slice(todos, func(i, j int) bool {
@@ -39,7 +40,7 @@ func listTodos(cmd *cobra.Command, args []string) {
 	for _, todo := range todos {
 		title := todo.Title
 		if len(todo.Notes) > 0 {
-			title += " 󰈙"
+			title += " *"
 		}
 
 		fmt.Println(

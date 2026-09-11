@@ -180,13 +180,13 @@ func (m *model) startAddTodo() {
 	m.focusedField = fieldTitle
 	m.titleInput.SetValue("")
 	m.notesInput.SetValue("")
-	m.priorityIndex = 0
+	m.priority = models.Low
 	m.titleInput.Focus()
 	m.notesInput.Blur()
 }
 
 func (m *model) startEditTodo() {
-	todos := m.todoList.List()
+	todos := m.todoList.Todos
 	if len(todos) == 0 || m.cursor >= len(todos) {
 		return
 	}
@@ -199,15 +199,7 @@ func (m *model) startEditTodo() {
 
 	m.titleInput.SetValue(todo.Title)
 	m.notesInput.SetValue(todo.Notes)
-
-	switch todo.Priority {
-	case models.Low:
-		m.priorityIndex = 0
-	case models.Medium:
-		m.priorityIndex = 1
-	case models.High:
-		m.priorityIndex = 2
-	}
+	m.priority = todo.Priority
 
 	m.titleInput.Focus()
 	m.notesInput.Blur()
@@ -245,11 +237,13 @@ func (m *model) cycleFocusedField(reverse bool) {
 }
 
 func (m *model) cyclePriority(up bool) {
+	idx := priorityIndex(m.priority)
 	if up {
-		m.priorityIndex = (m.priorityIndex - 1 + 3) % 3
+		idx = (idx - 1 + len(priorityOptions)) % len(priorityOptions)
 	} else {
-		m.priorityIndex = (m.priorityIndex + 1) % 3
+		idx = (idx + 1) % len(priorityOptions)
 	}
+	m.priority = priorityAt(idx)
 }
 
 func (m *model) submitNewTodo() tea.Cmd {
@@ -261,18 +255,7 @@ func (m *model) submitNewTodo() tea.Cmd {
 
 	notes := strings.TrimSpace(m.notesInput.Value())
 
-	// Convert priorityIndex to Priority
-	var priority models.Priority
-	switch m.priorityIndex {
-	case 0:
-		priority = models.Low
-	case 1:
-		priority = models.Medium
-	case 2:
-		priority = models.High
-	}
-
-	err := m.todoList.Add(title, priority, notes)
+	err := m.todoList.Add(title, m.priority, notes)
 	if err != nil {
 		m.err = err
 		return nil
@@ -291,18 +274,7 @@ func (m *model) updateTodo() tea.Cmd {
 
 	notes := strings.TrimSpace(m.notesInput.Value())
 
-	// Convert priorityIndex to Priority
-	var priority models.Priority
-	switch m.priorityIndex {
-	case 0:
-		priority = models.Low
-	case 1:
-		priority = models.Medium
-	case 2:
-		priority = models.High
-	}
-
-	err := m.todoList.Update(m.editingID, title, priority, notes)
+	err := m.todoList.Update(m.editingID, title, m.priority, notes)
 	if err != nil {
 		m.err = err
 		return nil
@@ -320,14 +292,14 @@ func (m *model) deleteTodo() tea.Cmd {
 	m.confirmDelete = false
 	m.deleteID = 0
 
-	if m.cursor >= len(m.todoList.List()) && m.cursor > 0 {
+	if m.cursor >= len(m.todoList.Todos) && m.cursor > 0 {
 		m.cursor--
 	}
 	return m.saveTodosCmd()
 }
 
 func (m *model) toggleTodo() tea.Cmd {
-	todos := m.todoList.List()
+	todos := m.todoList.Todos
 	if len(todos) == 0 || m.cursor >= len(todos) {
 		return nil
 	}
@@ -337,7 +309,7 @@ func (m *model) toggleTodo() tea.Cmd {
 		return nil
 	}
 
-	todos = m.todoList.List()
+	todos = m.todoList.Todos
 	if idx := findTodoIndexByID(todos, selectedID); idx >= 0 {
 		m.cursor = idx
 	}
@@ -359,7 +331,7 @@ func (m *model) cancelDelete() {
 }
 
 func (m *model) confirmDeleteAtCursor() {
-	todos := m.todoList.List()
+	todos := m.todoList.Todos
 	if len(todos) == 0 || m.cursor >= len(todos) {
 		return
 	}

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -21,22 +22,42 @@ func TestNewTodoList(t *testing.T) {
 	}
 }
 
+func TestPriority_IsValid(t *testing.T) {
+	for _, p := range []Priority{Low, Medium, High} {
+		if !p.IsValid() {
+			t.Errorf("Priority %d should be valid", p)
+		}
+	}
+	for _, p := range []Priority{Priority(-1), Priority(3), Priority(100)} {
+		if p.IsValid() {
+			t.Errorf("Priority %d should be invalid", p)
+		}
+	}
+}
+
 func TestTodoList_Add(t *testing.T) {
 	tests := []struct {
 		name        string
 		text        string
+		priority    Priority
+		notes       string
 		expectError bool
 	}{
-		{"Valid todo", "Buy groceries", false},
-		{"Empty string", "", true},
-		{"Only spaces", "   ", true},
-		{"Valid with spaces", "  Buy milk  ", false},
+		{"Valid todo", "Buy groceries", Low, "", false},
+		{"Empty string", "", Low, "", true},
+		{"Only spaces", "   ", Low, "", true},
+		{"Valid with spaces", "  Buy milk  ", Low, "", false},
+		{"Invalid priority", "Valid title", Priority(99), "", true},
+		{"Max title length", strings.Repeat("a", MaxTitleLength), Low, "", false},
+		{"Title too long", strings.Repeat("a", MaxTitleLength+1), Low, "", true},
+		{"Max notes length", "Valid title", Low, strings.Repeat("b", MaxNotesLength), false},
+		{"Notes too long", "Valid title", Low, strings.Repeat("b", MaxNotesLength+1), true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tl := NewTodoList()
-			err := tl.Add(tt.text, Low, "")
+			err := tl.Add(tt.text, tt.priority, tt.notes)
 
 			if tt.expectError {
 				if err == nil {
@@ -392,6 +413,30 @@ func TestTodoList_Edit(t *testing.T) {
 			expectError: true,
 			expected:    []Todo{},
 		},
+		{
+			name: "Edit with empty title",
+			initial: []Todo{
+				{ID: 1, Title: "Old text", Completed: false},
+			},
+			id:          1,
+			newText:     "   ",
+			expectError: true,
+			expected: []Todo{
+				{ID: 1, Title: "Old text", Completed: false},
+			},
+		},
+		{
+			name: "Edit with oversized title",
+			initial: []Todo{
+				{ID: 1, Title: "Old text", Completed: false},
+			},
+			id:          1,
+			newText:     strings.Repeat("x", MaxTitleLength+1),
+			expectError: true,
+			expected: []Todo{
+				{ID: 1, Title: "Old text", Completed: false},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -411,6 +456,108 @@ func TestTodoList_Edit(t *testing.T) {
 				if err != nil {
 					t.Errorf("Unexpected error: %v", err)
 				}
+			}
+
+			if len(tl.Todos) != len(tt.expected) {
+				t.Fatalf("Expected %d todos, got %d", len(tt.expected), len(tl.Todos))
+			}
+
+			for i := range tl.Todos {
+				if tl.Todos[i] != tt.expected[i] {
+					t.Errorf("Expected todo %+v, got %+v", tt.expected[i], tl.Todos[i])
+				}
+			}
+		})
+	}
+}
+
+func TestTodoList_Update(t *testing.T) {
+	tests := []struct {
+		name        string
+		initial     []Todo
+		id          int
+		title       string
+		priority    Priority
+		notes       string
+		expectError bool
+		expected    []Todo
+	}{
+		{
+			name:        "Update existing todo",
+			initial:     []Todo{{ID: 1, Title: "Old", Notes: "old notes", Priority: Low}},
+			id:          1,
+			title:       "New title",
+			priority:    High,
+			notes:       "new notes",
+			expectError: false,
+			expected:    []Todo{{ID: 1, Title: "New title", Notes: "new notes", Priority: High}},
+		},
+		{
+			name:        "Update empty title",
+			initial:     []Todo{{ID: 1, Title: "Old", Notes: "", Priority: Low}},
+			id:          1,
+			title:       "   ",
+			priority:    Low,
+			notes:       "",
+			expectError: true,
+			expected:    []Todo{{ID: 1, Title: "Old", Notes: "", Priority: Low}},
+		},
+		{
+			name:        "Update invalid priority",
+			initial:     []Todo{{ID: 1, Title: "Old", Notes: "", Priority: Low}},
+			id:          1,
+			title:       "New title",
+			priority:    Priority(99),
+			notes:       "",
+			expectError: true,
+			expected:    []Todo{{ID: 1, Title: "Old", Notes: "", Priority: Low}},
+		},
+		{
+			name:        "Update with oversized title",
+			initial:     []Todo{{ID: 1, Title: "Old", Notes: "", Priority: Low}},
+			id:          1,
+			title:       strings.Repeat("x", MaxTitleLength+1),
+			priority:    Low,
+			notes:       "",
+			expectError: true,
+			expected:    []Todo{{ID: 1, Title: "Old", Notes: "", Priority: Low}},
+		},
+		{
+			name:        "Update with oversized notes",
+			initial:     []Todo{{ID: 1, Title: "Old", Notes: "", Priority: Low}},
+			id:          1,
+			title:       "New title",
+			priority:    Low,
+			notes:       strings.Repeat("y", MaxNotesLength+1),
+			expectError: true,
+			expected:    []Todo{{ID: 1, Title: "Old", Notes: "", Priority: Low}},
+		},
+		{
+			name:        "Update non-existent todo",
+			initial:     []Todo{{ID: 1, Title: "Old", Notes: "", Priority: Low}},
+			id:          99,
+			title:       "New title",
+			priority:    Low,
+			notes:       "",
+			expectError: true,
+			expected:    []Todo{{ID: 1, Title: "Old", Notes: "", Priority: Low}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tl := &TodoList{
+				Todos: append([]Todo(nil), tt.initial...),
+			}
+
+			err := tl.Update(tt.id, tt.title, tt.priority, tt.notes)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error updating ID %d, got nil", tt.id)
+				}
+			} else if err != nil {
+				t.Errorf("Unexpected error: %v", err)
 			}
 
 			if len(tl.Todos) != len(tt.expected) {
@@ -455,6 +602,14 @@ func TestTodoList_AppendNotes(t *testing.T) {
 			id:          99,
 			newNotes:    "more",
 			wantNotes:   "initial",
+			expectError: true,
+		},
+		{
+			name:        "Appended notes exceed limit",
+			initial:     []Todo{{ID: 1, Title: "Test", Notes: strings.Repeat("a", MaxNotesLength)}},
+			id:          1,
+			newNotes:    "extra",
+			wantNotes:   strings.Repeat("a", MaxNotesLength),
 			expectError: true,
 		},
 	}

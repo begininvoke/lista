@@ -40,8 +40,8 @@ func TestNewModel(t *testing.T) {
 		t.Errorf("Expected focusedField to be fieldTitle, got %v", m.focusedField)
 	}
 
-	if m.priorityIndex != 0 {
-		t.Errorf("Expected priorityIndex 0, got %d", m.priorityIndex)
+	if m.priority != models.Low {
+		t.Errorf("Expected priority %v, got %v", models.Low, m.priority)
 	}
 
 	if m.titleInput.Placeholder != "Task title..." {
@@ -50,6 +50,42 @@ func TestNewModel(t *testing.T) {
 
 	if m.notesInput.Placeholder != "Add notes (optional)..." {
 		t.Errorf("Expected notes placeholder 'Add notes (optional)...', got '%s'", m.notesInput.Placeholder)
+	}
+}
+
+func TestPriorityMapping(t *testing.T) {
+	for _, p := range priorityOptions {
+		if got := priorityAt(priorityIndex(p)); got != p {
+			t.Errorf("priorityAt(priorityIndex(%v)) = %v, want %v", p, got, p)
+		}
+	}
+}
+
+func TestCyclePriority(t *testing.T) {
+	m := NewModel(models.NewTodoList(), "test.json")
+
+	if m.priority != models.Low {
+		t.Fatalf("Expected starting priority Low, got %v", m.priority)
+	}
+
+	m.cyclePriority(false)
+	if m.priority != models.Medium {
+		t.Errorf("Expected Medium after cycling down, got %v", m.priority)
+	}
+
+	m.cyclePriority(false)
+	if m.priority != models.High {
+		t.Errorf("Expected High after second cycle down, got %v", m.priority)
+	}
+
+	m.cyclePriority(false)
+	if m.priority != models.Low {
+		t.Errorf("Expected wrap to Low, got %v", m.priority)
+	}
+
+	m.cyclePriority(true)
+	if m.priority != models.High {
+		t.Errorf("Expected High after cycling up from Low, got %v", m.priority)
 	}
 }
 

@@ -25,6 +25,8 @@ func viewTodo(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid todo ID %q", args[0])
 	}
 
+	loadStyles()
+
 	todo, err := todoList.GetByID(id)
 	if err != nil {
 		return err
