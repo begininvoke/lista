@@ -22,7 +22,7 @@ func (m model) View() string {
 	}
 
 	var b strings.Builder
-	todos := m.todoList.List()
+	todos := m.todoList.Todos
 
 	b.WriteString(m.renderTitle())
 	b.WriteString(m.renderError())
@@ -121,7 +121,7 @@ func (m model) renderHelp() string {
 }
 
 func (m model) renderDeleteModal() string {
-	todos := m.todoList.List()
+	todos := m.todoList.Todos
 	var title string
 	for _, t := range todos {
 		if t.ID == m.deleteID {

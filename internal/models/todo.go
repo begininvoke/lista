@@ -85,6 +85,8 @@ func (tl *TodoList) Complete(id int) error {
 	return fmt.Errorf("todo with ID %d not found", id)
 }
 
+// List returns a copy of the todos so callers can read or mutate the
+// snapshot without affecting the live list (e.g. sorting in CLI output).
 func (tl *TodoList) List() []Todo {
 	result := make([]Todo, len(tl.Todos))
 	copy(result, tl.Todos)

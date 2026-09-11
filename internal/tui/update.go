@@ -186,7 +186,7 @@ func (m *model) startAddTodo() {
 }
 
 func (m *model) startEditTodo() {
-	todos := m.todoList.List()
+	todos := m.todoList.Todos
 	if len(todos) == 0 || m.cursor >= len(todos) {
 		return
 	}
@@ -320,14 +320,14 @@ func (m *model) deleteTodo() tea.Cmd {
 	m.confirmDelete = false
 	m.deleteID = 0
 
-	if m.cursor >= len(m.todoList.List()) && m.cursor > 0 {
+	if m.cursor >= len(m.todoList.Todos) && m.cursor > 0 {
 		m.cursor--
 	}
 	return m.saveTodosCmd()
 }
 
 func (m *model) toggleTodo() tea.Cmd {
-	todos := m.todoList.List()
+	todos := m.todoList.Todos
 	if len(todos) == 0 || m.cursor >= len(todos) {
 		return nil
 	}
@@ -337,7 +337,7 @@ func (m *model) toggleTodo() tea.Cmd {
 		return nil
 	}
 
-	todos = m.todoList.List()
+	todos = m.todoList.Todos
 	if idx := findTodoIndexByID(todos, selectedID); idx >= 0 {
 		m.cursor = idx
 	}
@@ -359,7 +359,7 @@ func (m *model) cancelDelete() {
 }
 
 func (m *model) confirmDeleteAtCursor() {
-	todos := m.todoList.List()
+	todos := m.todoList.Todos
 	if len(todos) == 0 || m.cursor >= len(todos) {
 		return
 	}
