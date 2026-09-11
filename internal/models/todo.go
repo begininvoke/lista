@@ -184,10 +184,10 @@ func (tl *TodoList) AppendNotes(id int, notes string) error {
 			if tl.Todos[i].Notes != "" {
 				newNotes = tl.Todos[i].Notes + " " + notes
 			}
-if err := validateNotes(newNotes); err != nil {
-			return err
-		}
-		tl.Todos[i].Notes = newNotes
+			if err := validateNotes(newNotes); err != nil {
+				return err
+			}
+			tl.Todos[i].Notes = newNotes
 			return nil
 		}
 	}

@@ -17,6 +17,7 @@ var listCmd = &cobra.Command{
 }
 
 func listTodos(cmd *cobra.Command, args []string) {
+	loadStyles()
 	todos := todoList.List()
 
 	sort.Slice(todos, func(i, j int) bool {

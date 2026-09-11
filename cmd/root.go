@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/kwame-Owusu/lista/internal/config"
@@ -19,11 +20,23 @@ var version = "dev"
 var todoList *models.TodoList
 var dataFile string //$HOME/.config/lista, where our json configs live
 
-func loadTodos() {
+var styleOnce sync.Once
+
+func loadStyles() {
+	styleOnce.Do(func() {
+		cfg, err := config.LoadConfig()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading config: %v, using defaults\n", err)
+			cfg = &config.Config{Theme: config.DefaultTheme()}
+		}
+		tui.InitStyles(cfg.Theme)
+	})
+}
+
+func loadTodos() error {
 	path, err := config.DataFilePath()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error resolving config path: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("resolving config path: %w", err)
 	}
 	dataFile = path
 
@@ -34,8 +47,7 @@ func loadTodos() {
 	permissions := 0755
 
 	if err := os.MkdirAll(filepath.Dir(dataFile), os.FileMode(permissions)); err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating config directory: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("creating config directory: %w", err)
 	}
 
 	todos, err := storage.LoadTodos(dataFile)
@@ -43,7 +55,7 @@ func loadTodos() {
 		// First run: no data file yet, start fresh.
 		if errors.Is(err, fs.ErrNotExist) {
 			todoList = models.NewTodoList()
-			return
+			return nil
 		}
 
 		// The file exists but couldn't be loaded (corrupt JSON, permissions,
@@ -57,7 +69,7 @@ func loadTodos() {
 		}
 
 		todoList = models.NewTodoList()
-		return
+		return nil
 	}
 
 	// File exists - create TodoList and populate it
@@ -69,6 +81,7 @@ func loadTodos() {
 			todoList.NextID = todo.ID + 1
 		}
 	}
+	return nil
 }
 
 func saveTodos() error {
@@ -85,7 +98,11 @@ var rootCmd = &cobra.Command{
 	Long:          `Lista is a simple and aesthetic CLI app to manage your todos on the terminal.`,
 	SilenceErrors: true,
 	SilenceUsage:  true,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		return loadTodos()
+	},
 	Run: func(cmd *cobra.Command, args []string) {
+		loadStyles()
 		m := tui.NewModel(todoList, dataFile)
 		p := tea.NewProgram(m)
 		if _, err := p.Run(); err != nil {
@@ -113,14 +130,4 @@ func init() {
 	rootCmd.AddCommand(viewCmd)
 	rootCmd.AddCommand(addNotesCmd)
 	rootCmd.AddCommand(exportCmd)
-	loadTodos()
-
-	// Load config
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading config: %v, using defaults\n", err)
-		cfg = &config.Config{Theme: config.DefaultTheme()}
-	}
-
-	tui.InitStyles(cfg.Theme)
 }
