@@ -13,6 +13,30 @@ const (
 	MaxNotesLength = 500
 )
 
+func validateTitle(title string) error {
+	if strings.TrimSpace(title) == "" {
+		return fmt.Errorf("todo title cannot be empty")
+	}
+	if utf8.RuneCountInString(title) > MaxTitleLength {
+		return fmt.Errorf("todo title exceeds %d characters", MaxTitleLength)
+	}
+	return nil
+}
+
+func validateNotes(notes string) error {
+	if utf8.RuneCountInString(notes) > MaxNotesLength {
+		return fmt.Errorf("todo notes exceed %d characters", MaxNotesLength)
+	}
+	return nil
+}
+
+func validatePriority(priority Priority) error {
+	if !priority.IsValid() {
+		return fmt.Errorf("invalid priority: %d", priority)
+	}
+	return nil
+}
+
 type Todo struct {
 	ID        int       `json:"id"`
 	Title     string    `json:"title"`
@@ -52,17 +76,14 @@ func NewTodoList() *TodoList {
 }
 
 func (tl *TodoList) Add(title string, priority Priority, notes string) error {
-	if strings.TrimSpace(title) == "" {
-		return fmt.Errorf("todo title cannot be empty")
+	if err := validateTitle(title); err != nil {
+		return err
 	}
-	if !priority.IsValid() {
-		return fmt.Errorf("invalid priority: %d", priority)
+	if err := validatePriority(priority); err != nil {
+		return err
 	}
-	if utf8.RuneCountInString(title) > MaxTitleLength {
-		return fmt.Errorf("todo title exceeds %d characters", MaxTitleLength)
-	}
-	if utf8.RuneCountInString(notes) > MaxNotesLength {
-		return fmt.Errorf("todo notes exceed %d characters", MaxNotesLength)
+	if err := validateNotes(notes); err != nil {
+		return err
 	}
 	todo := Todo{
 		ID:        tl.NextID,
@@ -78,17 +99,14 @@ func (tl *TodoList) Add(title string, priority Priority, notes string) error {
 }
 
 func (tl *TodoList) Update(id int, title string, priority Priority, notes string) error {
-	if strings.TrimSpace(title) == "" {
-		return fmt.Errorf("todo title cannot be empty")
+	if err := validateTitle(title); err != nil {
+		return err
 	}
-	if !priority.IsValid() {
-		return fmt.Errorf("invalid priority: %d", priority)
+	if err := validatePriority(priority); err != nil {
+		return err
 	}
-	if utf8.RuneCountInString(title) > MaxTitleLength {
-		return fmt.Errorf("todo title exceeds %d characters", MaxTitleLength)
-	}
-	if utf8.RuneCountInString(notes) > MaxNotesLength {
-		return fmt.Errorf("todo notes exceed %d characters", MaxNotesLength)
+	if err := validateNotes(notes); err != nil {
+		return err
 	}
 
 	for i := range tl.Todos {
@@ -146,8 +164,8 @@ func (tl *TodoList) Delete(id int) error {
 }
 
 func (tl *TodoList) Edit(id int, title string) error {
-	if utf8.RuneCountInString(title) > MaxTitleLength {
-		return fmt.Errorf("todo title exceeds %d characters", MaxTitleLength)
+	if err := validateTitle(title); err != nil {
+		return err
 	}
 
 	for i := range tl.Todos {
@@ -166,10 +184,10 @@ func (tl *TodoList) AppendNotes(id int, notes string) error {
 			if tl.Todos[i].Notes != "" {
 				newNotes = tl.Todos[i].Notes + " " + notes
 			}
-			if utf8.RuneCountInString(newNotes) > MaxNotesLength {
-				return fmt.Errorf("todo notes exceed %d characters", MaxNotesLength)
-			}
-			tl.Todos[i].Notes = newNotes
+if err := validateNotes(newNotes); err != nil {
+			return err
+		}
+		tl.Todos[i].Notes = newNotes
 			return nil
 		}
 	}

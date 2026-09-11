@@ -414,6 +414,18 @@ func TestTodoList_Edit(t *testing.T) {
 			expected:    []Todo{},
 		},
 		{
+			name: "Edit with empty title",
+			initial: []Todo{
+				{ID: 1, Title: "Old text", Completed: false},
+			},
+			id:          1,
+			newText:     "   ",
+			expectError: true,
+			expected: []Todo{
+				{ID: 1, Title: "Old text", Completed: false},
+			},
+		},
+		{
 			name: "Edit with oversized title",
 			initial: []Todo{
 				{ID: 1, Title: "Old text", Completed: false},
