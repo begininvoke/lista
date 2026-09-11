@@ -20,7 +20,8 @@ var exportCmd = &cobra.Command{
 func exportTodos(cmd *cobra.Command, args []string) {
 	todos, err := storage.LoadTodos(dataFile)
 	if err != nil {
-		fmt.Printf("Error reading todos %v", err)
+		fmt.Fprintf(os.Stderr, "Error reading todos: %v\n", err)
+		return
 	}
 
 	var sb strings.Builder
