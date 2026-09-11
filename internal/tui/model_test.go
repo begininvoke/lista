@@ -1,7 +1,9 @@
 package tui
 
 import (
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/kwame-Owusu/lista/internal/models"
 )
@@ -48,5 +50,38 @@ func TestNewModel(t *testing.T) {
 
 	if m.notesInput.Placeholder != "Add notes (optional)..." {
 		t.Errorf("Expected notes placeholder 'Add notes (optional)...', got '%s'", m.notesInput.Placeholder)
+	}
+}
+
+func TestTickRefresh(t *testing.T) {
+	tl := models.NewTodoList()
+	err := tl.Add("Test todo", models.Low, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tl.Todos[0].CreatedAt = time.Now().Add(-2 * time.Second)
+
+	m := NewModel(tl, "test.json")
+
+	if space := strings.TrimSpace(m.View()); strings.Contains(space, "No todos yet") {
+		t.Fatal("Expected rendered list, got 'No todos yet'")
+	}
+
+	updated, cmd := m.Update(tickMsg{})
+	if cmd == nil {
+		t.Error("Expected Update to re-arm the tick command")
+	}
+
+	view := updated.View()
+	if !strings.Contains(view, "added 2s ago") {
+		t.Errorf("Expected fresh timestamp 'added 2s ago' in view, got:\n%s", view)
+	}
+
+	updatedForm, cmdForm := updated.Update(tickMsg{})
+	if cmdForm == nil {
+		t.Error("Expected heartbeat to stay armed while in a form")
+	}
+	if _, ok := updatedForm.(model); !ok {
+		t.Errorf("Expected model back after tick, got %T", updatedForm)
 	}
 }
