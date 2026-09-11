@@ -22,7 +22,7 @@ var dataFile string //$HOME/.config/lista, where our json configs live
 func loadTodos() {
 	path, err := config.DataFilePath()
 	if err != nil {
-		fmt.Printf("Error resolving config path: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error resolving config path: %v\n", err)
 		os.Exit(1)
 	}
 	dataFile = path
@@ -34,7 +34,7 @@ func loadTodos() {
 	permissions := 0755
 
 	if err := os.MkdirAll(filepath.Dir(dataFile), os.FileMode(permissions)); err != nil {
-		fmt.Printf("Error creating config directory: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error creating config directory: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -48,12 +48,12 @@ func loadTodos() {
 
 		// The file exists but couldn't be loaded (corrupt JSON, permissions,
 		// ...). Move it aside so the next save doesn't silently destroy it.
-		fmt.Printf("Warning: unable to read %s (%v)\n", dataFile, err)
+		fmt.Fprintf(os.Stderr, "Warning: unable to read %s (%v)\n", dataFile, err)
 		backup, backupErr := storage.BackupCorruptFile(dataFile)
 		if backupErr != nil {
-			fmt.Printf("Error: could not back up the file: %v\n", backupErr)
+			fmt.Fprintf(os.Stderr, "Error: could not back up the file: %v\n", backupErr)
 		} else {
-			fmt.Printf("Your data file was moved to %s; starting with an empty list.\n", backup)
+			fmt.Fprintf(os.Stderr, "Your data file was moved to %s; starting with an empty list.\n", backup)
 		}
 
 		todoList = models.NewTodoList()
@@ -71,22 +71,25 @@ func loadTodos() {
 	}
 }
 
-func saveTodos() {
+func saveTodos() error {
 	err := storage.SaveTodos(todoList.Todos, dataFile)
 	if err != nil {
-		fmt.Printf("Error saving todos: %v\n", err)
+		return fmt.Errorf("saving todos: %w", err)
 	}
+	return nil
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "lista",
-	Short: "A minimal todo CLI program",
-	Long:  `Lista is a simple and aesthetic CLI app to manage your todos on the terminal.`,
+	Use:           "lista",
+	Short:         "A minimal todo CLI program",
+	Long:          `Lista is a simple and aesthetic CLI app to manage your todos on the terminal.`,
+	SilenceErrors: true,
+	SilenceUsage:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		m := tui.NewModel(todoList, dataFile)
 		p := tea.NewProgram(m)
 		if _, err := p.Run(); err != nil {
-			fmt.Printf("Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
 	},
@@ -94,7 +97,7 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
@@ -115,7 +118,7 @@ func init() {
 	// Load config
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		fmt.Printf("Error loading config: %v, using defaults\n", err)
+		fmt.Fprintf(os.Stderr, "Error loading config: %v, using defaults\n", err)
 		cfg = &config.Config{Theme: config.DefaultTheme()}
 	}
 

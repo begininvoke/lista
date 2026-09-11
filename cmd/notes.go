@@ -13,31 +13,25 @@ var addNotesCmd = &cobra.Command{
 	Short: "Adds notes to a todo",
 	Long:  "Adds notes to a todo, if not present. if present it appends to the existing note",
 	Args:  cobra.MinimumNArgs(1),
-	Run:   addNotes,
+	RunE:  addNotes,
 }
 
-func addNotes(cmd *cobra.Command, args []string) {
+func addNotes(cmd *cobra.Command, args []string) error {
 	id, err := strconv.Atoi(args[0])
 	if err != nil {
-		fmt.Printf("Error converting id to int: %v", err)
-		return
+		return fmt.Errorf("invalid todo ID %q", args[0])
 	}
 
 	todo, err := todoList.GetByID(id)
 	if err != nil {
-		fmt.Printf("No todo with ID %d exists", id)
-		return
+		return err
 	}
 	newNotes := strings.Join(args[1:], " ")
 
-	if todo.ID == id {
-		if todo.Notes != "" {
-			todo.Notes += " " + newNotes
-		} else {
-			todo.Notes = newNotes
-		}
-		saveTodos()
-		return
+	if todo.Notes != "" {
+		todo.Notes += " " + newNotes
+	} else {
+		todo.Notes = newNotes
 	}
-	fmt.Printf("No todo with ID %v exists\n", id)
+	return saveTodos()
 }
