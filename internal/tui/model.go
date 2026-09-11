@@ -38,11 +38,11 @@ type model struct {
 	deleteID      int
 
 	// Form state
-	addingTodo    bool
-	focusedField  formField
-	titleInput    textinput.Model
-	notesInput    textarea.Model
-	priorityIndex int // 0=Low, 1=Medium, 2=High
+	addingTodo   bool
+	focusedField formField
+	titleInput   textinput.Model
+	notesInput   textarea.Model
+	priority     models.Priority
 
 	// editing state
 	editingTodo bool
@@ -65,14 +65,14 @@ func NewModel(todoList *models.TodoList, filename string) model {
 	ta.ShowLineNumbers = false
 
 	return model{
-		todoList:      todoList,
-		cursor:        0,
-		filename:      filename,
-		titleInput:    ti,
-		notesInput:    ta,
-		priorityIndex: 0, // Default to Low
-		addingTodo:    false,
-		focusedField:  fieldTitle,
+		todoList:     todoList,
+		cursor:       0,
+		filename:     filename,
+		titleInput:   ti,
+		notesInput:   ta,
+		priority:     models.Low,
+		addingTodo:   false,
+		focusedField: fieldTitle,
 	}
 }
 
@@ -87,4 +87,22 @@ func findTodoIndexByID(todos []models.Todo, id int) int {
 		}
 	}
 	return -1
+}
+
+var priorityOptions = []models.Priority{models.Low, models.Medium, models.High}
+
+func priorityIndex(p models.Priority) int {
+	for i, pri := range priorityOptions {
+		if pri == p {
+			return i
+		}
+	}
+	return 0
+}
+
+func priorityAt(i int) models.Priority {
+	if i < 0 || i >= len(priorityOptions) {
+		return models.Low
+	}
+	return priorityOptions[i]
 }

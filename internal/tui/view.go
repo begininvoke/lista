@@ -153,6 +153,38 @@ func (m model) renderDeleteModal() string {
 	)
 }
 
+func (m model) renderPrioritySelector() string {
+	var b strings.Builder
+
+	priorityLabel := "Priority:"
+	if m.focusedField == fieldPriority {
+		priorityLabel = cursorStyle.Render("→ Priority:")
+	} else {
+		priorityLabel = itemStyle.Render("  Priority:")
+	}
+	b.WriteString(priorityLabel + "\n")
+
+	for i, p := range priorityOptions {
+		var style lipgloss.Style
+		if p == m.priority {
+			if m.focusedField == fieldPriority {
+				style = selectedStyle
+			} else {
+				style = itemStyle.Foreground(fgMain)
+			}
+		} else {
+			style = itemStyle.Foreground(fgMuted)
+		}
+		b.WriteString("  " + style.Render(p.String()))
+		if i < len(priorityOptions)-1 {
+			b.WriteString("  ")
+		}
+	}
+	b.WriteString("\n\n")
+
+	return b.String()
+}
+
 func (m model) renderAddForm() string {
 	var b strings.Builder
 
@@ -171,33 +203,7 @@ func (m model) renderAddForm() string {
 	b.WriteString(m.titleInput.View() + "\n\n")
 
 	// Priority field
-	priorities := []string{"Low", "Medium", "High"}
-	priorityLabel := "Priority:"
-	if m.focusedField == fieldPriority {
-		priorityLabel = cursorStyle.Render("→ Priority:")
-	} else {
-		priorityLabel = itemStyle.Render("  Priority:")
-	}
-	b.WriteString(priorityLabel + "\n")
-
-	// Render priority options
-	for i, p := range priorities {
-		var style lipgloss.Style
-		if i == m.priorityIndex {
-			if m.focusedField == fieldPriority {
-				style = selectedStyle
-			} else {
-				style = itemStyle.Foreground(fgMain)
-			}
-		} else {
-			style = itemStyle.Foreground(fgMuted)
-		}
-		b.WriteString("  " + style.Render(p))
-		if i < len(priorities)-1 {
-			b.WriteString("  ")
-		}
-	}
-	b.WriteString("\n\n")
+	b.WriteString(m.renderPrioritySelector())
 
 	// Notes field
 	notesLabel := "Notes (optional):"
@@ -244,33 +250,7 @@ func (m model) renderEditForm() string {
 	b.WriteString(m.titleInput.View() + "\n\n")
 
 	// Priority field
-	priorities := []string{"Low", "Medium", "High"}
-	priorityLabel := "Priority:"
-	if m.focusedField == fieldPriority {
-		priorityLabel = cursorStyle.Render("→ Priority:")
-	} else {
-		priorityLabel = itemStyle.Render("  Priority:")
-	}
-	b.WriteString(priorityLabel + "\n")
-
-	// Render priority options
-	for i, p := range priorities {
-		var style lipgloss.Style
-		if i == m.priorityIndex {
-			if m.focusedField == fieldPriority {
-				style = selectedStyle
-			} else {
-				style = itemStyle.Foreground(fgMain)
-			}
-		} else {
-			style = itemStyle.Foreground(fgMuted)
-		}
-		b.WriteString("  " + style.Render(p))
-		if i < len(priorities)-1 {
-			b.WriteString("  ")
-		}
-	}
-	b.WriteString("\n\n")
+	b.WriteString(m.renderPrioritySelector())
 
 	// Notes field
 	notesLabel := "Notes (optional):"

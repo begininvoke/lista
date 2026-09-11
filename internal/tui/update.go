@@ -180,7 +180,7 @@ func (m *model) startAddTodo() {
 	m.focusedField = fieldTitle
 	m.titleInput.SetValue("")
 	m.notesInput.SetValue("")
-	m.priorityIndex = 0
+	m.priority = models.Low
 	m.titleInput.Focus()
 	m.notesInput.Blur()
 }
@@ -199,15 +199,7 @@ func (m *model) startEditTodo() {
 
 	m.titleInput.SetValue(todo.Title)
 	m.notesInput.SetValue(todo.Notes)
-
-	switch todo.Priority {
-	case models.Low:
-		m.priorityIndex = 0
-	case models.Medium:
-		m.priorityIndex = 1
-	case models.High:
-		m.priorityIndex = 2
-	}
+	m.priority = todo.Priority
 
 	m.titleInput.Focus()
 	m.notesInput.Blur()
@@ -245,11 +237,13 @@ func (m *model) cycleFocusedField(reverse bool) {
 }
 
 func (m *model) cyclePriority(up bool) {
+	idx := priorityIndex(m.priority)
 	if up {
-		m.priorityIndex = (m.priorityIndex - 1 + 3) % 3
+		idx = (idx - 1 + len(priorityOptions)) % len(priorityOptions)
 	} else {
-		m.priorityIndex = (m.priorityIndex + 1) % 3
+		idx = (idx + 1) % len(priorityOptions)
 	}
+	m.priority = priorityAt(idx)
 }
 
 func (m *model) submitNewTodo() tea.Cmd {
@@ -261,18 +255,7 @@ func (m *model) submitNewTodo() tea.Cmd {
 
 	notes := strings.TrimSpace(m.notesInput.Value())
 
-	// Convert priorityIndex to Priority
-	var priority models.Priority
-	switch m.priorityIndex {
-	case 0:
-		priority = models.Low
-	case 1:
-		priority = models.Medium
-	case 2:
-		priority = models.High
-	}
-
-	err := m.todoList.Add(title, priority, notes)
+	err := m.todoList.Add(title, m.priority, notes)
 	if err != nil {
 		m.err = err
 		return nil
@@ -291,18 +274,7 @@ func (m *model) updateTodo() tea.Cmd {
 
 	notes := strings.TrimSpace(m.notesInput.Value())
 
-	// Convert priorityIndex to Priority
-	var priority models.Priority
-	switch m.priorityIndex {
-	case 0:
-		priority = models.Low
-	case 1:
-		priority = models.Medium
-	case 2:
-		priority = models.High
-	}
-
-	err := m.todoList.Update(m.editingID, title, priority, notes)
+	err := m.todoList.Update(m.editingID, title, m.priority, notes)
 	if err != nil {
 		m.err = err
 		return nil
