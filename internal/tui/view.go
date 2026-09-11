@@ -78,7 +78,7 @@ func (m model) renderTodoLine(i int, todo models.Todo) string {
 	// Note indicator
 	noteIndicator := ""
 	if len(todo.Notes) > 0 {
-		noteIndicator = "󰈙"
+		noteIndicator = "*"
 	}
 
 	content := fmt.Sprintf("%s %s [%s] %s", checkbox, todo.Title, todo.Priority, noteIndicator)
