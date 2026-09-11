@@ -24,7 +24,6 @@ type model struct {
 	err           error
 	confirmDelete bool
 	deleteID      int
-	textarea      textarea.Model
 
 	// Form state
 	addingTodo    bool
