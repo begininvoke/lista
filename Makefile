@@ -11,6 +11,8 @@ run: build
 
 all: test build
 
+check: tidy vet
+
 .PHONY: test
 test:
 	$(GO) test -v -race -buildvcs ./...
@@ -18,6 +20,9 @@ test:
 tidy:
 	$(GO) mod tidy
 	$(GO) fmt ./...
+
+vet:
+	$(GO) vet ./...
 
 .PHONY: clean
 clean:
