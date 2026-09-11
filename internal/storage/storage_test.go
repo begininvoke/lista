@@ -122,3 +122,42 @@ func TestSaveLoad_RoundTrip(t *testing.T) {
 		}
 	}
 }
+
+func TestBackupCorruptFile(t *testing.T) {
+	tempDir, _ := os.MkdirTemp("", "todo-test-*")
+	defer os.RemoveAll(tempDir)
+
+	filename := filepath.Join(tempDir, "data.json")
+	if err := os.WriteFile(filename, []byte("{invalid json"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	backup, err := BackupCorruptFile(filename)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	// Original should be moved aside, backup should contain the data
+	if _, err := os.Stat(filename); !os.IsNotExist(err) {
+		t.Error("Original file should have been moved away")
+	}
+
+	content, err := os.ReadFile(backup)
+	if err != nil {
+		t.Fatalf("Backup file should exist and be readable: %v", err)
+	}
+	if string(content) != "{invalid json" {
+		t.Errorf("Backup should contain the original data, got %q", string(content))
+	}
+}
+
+func TestBackupCorruptFile_Missing(t *testing.T) {
+	tempDir, _ := os.MkdirTemp("", "todo-test-*")
+	defer os.RemoveAll(tempDir)
+
+	filename := filepath.Join(tempDir, "missing.json")
+
+	if _, err := BackupCorruptFile(filename); err == nil {
+		t.Error("Expected error when backing up a non-existent file")
+	}
+}

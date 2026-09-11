@@ -1,15 +1,18 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/kwame-Owusu/lista/internal/config"
 	"github.com/kwame-Owusu/lista/internal/models"
 	"github.com/kwame-Owusu/lista/internal/storage"
 	"github.com/kwame-Owusu/lista/internal/tui"
 	"github.com/spf13/cobra"
-	"os"
-	"path/filepath"
 )
 
 var version string
@@ -37,7 +40,22 @@ func loadTodos() {
 
 	todos, err := storage.LoadTodos(dataFile)
 	if err != nil {
-		// File doesn't exist or error reading - create new TodoList
+		// First run: no data file yet, start fresh.
+		if errors.Is(err, fs.ErrNotExist) {
+			todoList = models.NewTodoList()
+			return
+		}
+
+		// The file exists but couldn't be loaded (corrupt JSON, permissions,
+		// ...). Move it aside so the next save doesn't silently destroy it.
+		fmt.Printf("Warning: unable to read %s (%v)\n", dataFile, err)
+		backup, backupErr := storage.BackupCorruptFile(dataFile)
+		if backupErr != nil {
+			fmt.Printf("Error: could not back up the file: %v\n", backupErr)
+		} else {
+			fmt.Printf("Your data file was moved to %s; starting with an empty list.\n", backup)
+		}
+
 		todoList = models.NewTodoList()
 		return
 	}
