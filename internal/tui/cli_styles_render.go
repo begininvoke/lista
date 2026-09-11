@@ -7,14 +7,11 @@ import (
 //semantic render helpers to use for normal cli mode
 
 var (
-	headerStyle        lipgloss.Style
-	highPriorityText   lipgloss.Style
-	mediumPriorityText lipgloss.Style
-	lowPriorityText    lipgloss.Style
-	completedText      lipgloss.Style
-	pendingText        lipgloss.Style
-	mutedText          lipgloss.Style
-	normalText         lipgloss.Style
+	headerStyle   lipgloss.Style
+	completedText lipgloss.Style
+	pendingText   lipgloss.Style
+	mutedText     lipgloss.Style
+	normalText    lipgloss.Style
 )
 
 func RenderHeader(s string) string {
@@ -62,10 +59,10 @@ func RenderTimestamp(s string) string {
 func RenderPriority(priority string) string {
 	switch priority {
 	case "High":
-		return highPriorityText.PaddingRight(3).Render("High")
+		return GetPriorityStyle(priority).PaddingRight(3).Render("High")
 	case "Medium":
-		return mediumPriorityText.PaddingRight(3).Render("Medium")
+		return GetPriorityStyle(priority).PaddingRight(3).Render("Medium")
 	default:
-		return lowPriorityText.PaddingRight(6).Render("Low")
+		return GetPriorityStyle(priority).Bold(true).PaddingRight(6).Render("Low")
 	}
 }
