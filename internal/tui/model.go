@@ -53,13 +53,13 @@ func NewModel(todoList *models.TodoList, filename string) model {
 	// Title input
 	ti := textinput.New()
 	ti.Placeholder = "Task title..."
-	ti.CharLimit = 200
+	ti.CharLimit = models.MaxTitleLength
 	ti.Width = 50
 
 	// Notes textarea
 	ta := textarea.New()
 	ta.Placeholder = "Add notes (optional)..."
-	ta.CharLimit = 500
+	ta.CharLimit = models.MaxNotesLength
 	ta.SetWidth(50)
 	ta.SetHeight(5)
 	ta.ShowLineNumbers = false

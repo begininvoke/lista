@@ -26,6 +26,10 @@ func (p Priority) String() string {
 	return "Invalid Priority"
 }
 
+func (p Priority) IsValid() bool {
+	return p >= Low && p <= High
+}
+
 func ParsePriority(s string) (Priority, error) {
 	lower := strings.ToLower(s)
 	switch lower {

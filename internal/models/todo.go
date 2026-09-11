@@ -5,6 +5,12 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
+)
+
+const (
+	MaxTitleLength = 200
+	MaxNotesLength = 500
 )
 
 type Todo struct {
@@ -49,6 +55,15 @@ func (tl *TodoList) Add(title string, priority Priority, notes string) error {
 	if strings.TrimSpace(title) == "" {
 		return fmt.Errorf("todo title cannot be empty")
 	}
+	if !priority.IsValid() {
+		return fmt.Errorf("invalid priority: %d", priority)
+	}
+	if utf8.RuneCountInString(title) > MaxTitleLength {
+		return fmt.Errorf("todo title exceeds %d characters", MaxTitleLength)
+	}
+	if utf8.RuneCountInString(notes) > MaxNotesLength {
+		return fmt.Errorf("todo notes exceed %d characters", MaxNotesLength)
+	}
 	todo := Todo{
 		ID:        tl.NextID,
 		Title:     title,
@@ -63,6 +78,19 @@ func (tl *TodoList) Add(title string, priority Priority, notes string) error {
 }
 
 func (tl *TodoList) Update(id int, title string, priority Priority, notes string) error {
+	if strings.TrimSpace(title) == "" {
+		return fmt.Errorf("todo title cannot be empty")
+	}
+	if !priority.IsValid() {
+		return fmt.Errorf("invalid priority: %d", priority)
+	}
+	if utf8.RuneCountInString(title) > MaxTitleLength {
+		return fmt.Errorf("todo title exceeds %d characters", MaxTitleLength)
+	}
+	if utf8.RuneCountInString(notes) > MaxNotesLength {
+		return fmt.Errorf("todo notes exceed %d characters", MaxNotesLength)
+	}
+
 	for i := range tl.Todos {
 		if tl.Todos[i].ID == id {
 			tl.Todos[i].Title = title
@@ -118,6 +146,10 @@ func (tl *TodoList) Delete(id int) error {
 }
 
 func (tl *TodoList) Edit(id int, title string) error {
+	if utf8.RuneCountInString(title) > MaxTitleLength {
+		return fmt.Errorf("todo title exceeds %d characters", MaxTitleLength)
+	}
+
 	for i := range tl.Todos {
 		if tl.Todos[i].ID == id {
 			tl.Todos[i].Title = title
@@ -130,11 +162,14 @@ func (tl *TodoList) Edit(id int, title string) error {
 func (tl *TodoList) AppendNotes(id int, notes string) error {
 	for i := range tl.Todos {
 		if tl.Todos[i].ID == id {
+			newNotes := notes
 			if tl.Todos[i].Notes != "" {
-				tl.Todos[i].Notes += " " + notes
-			} else {
-				tl.Todos[i].Notes = notes
+				newNotes = tl.Todos[i].Notes + " " + notes
 			}
+			if utf8.RuneCountInString(newNotes) > MaxNotesLength {
+				return fmt.Errorf("todo notes exceed %d characters", MaxNotesLength)
+			}
+			tl.Todos[i].Notes = newNotes
 			return nil
 		}
 	}
