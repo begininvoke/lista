@@ -1,11 +1,23 @@
 package tui
 
 import (
+	"time"
+
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/kwame-Owusu/lista/internal/models"
 )
+
+type tickMsg struct{}
+
+const tickInterval = 30 * time.Second
+
+func tick() tea.Cmd {
+	return tea.Tick(tickInterval, func(time.Time) tea.Msg {
+		return tickMsg{}
+	})
+}
 
 type formField int
 
@@ -24,7 +36,6 @@ type model struct {
 	err           error
 	confirmDelete bool
 	deleteID      int
-	textarea      textarea.Model
 
 	// Form state
 	addingTodo    bool
@@ -66,7 +77,7 @@ func NewModel(todoList *models.TodoList, filename string) model {
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+	return tick()
 }
 
 func findTodoIndexByID(todos []models.Todo, id int) int {

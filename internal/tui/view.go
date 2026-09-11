@@ -22,11 +22,12 @@ func (m model) View() string {
 	}
 
 	var b strings.Builder
+	todos := m.todoList.List()
 
 	b.WriteString(m.renderTitle())
 	b.WriteString(m.renderError())
-	b.WriteString(m.renderTodos())
-	b.WriteString(m.renderCompletedCount())
+	b.WriteString(m.renderTodos(todos))
+	b.WriteString(m.renderCompletedCount(todos))
 	b.WriteString(m.renderHelp())
 
 	return b.String()
@@ -49,8 +50,7 @@ func (m model) renderError() string {
 	return errorStyle.Render(fmt.Sprintf("⚠ Error: %v", m.err)) + "\n\n"
 }
 
-func (m model) renderTodos() string {
-	todos := m.todoList.List()
+func (m model) renderTodos(todos []models.Todo) string {
 	if len(todos) == 0 {
 		return itemStyle.Render("No todos yet. Add one to get started!") + "\n"
 	}
@@ -101,13 +101,17 @@ func (m model) renderTodoLine(i int, todo models.Todo) string {
 	return fmt.Sprintf("%s %s %s %s", cursor, checkbox, itemStyle.Render(todoTitle), priorityBadge)
 }
 
-func (m model) renderCompletedCount() string {
-	todos := m.todoList.List()
+func (m model) renderCompletedCount(todos []models.Todo) string {
 	if len(todos) == 0 {
 		return ""
 	}
 
-	completedCount := len(m.todoList.GetCompleted())
+	completedCount := 0
+	for _, todo := range todos {
+		if todo.Completed {
+			completedCount++
+		}
+	}
 	countString := fmt.Sprintf("%v of %v complete", completedCount, len(todos))
 	return helpStyle.Render(countString)
 }

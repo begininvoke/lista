@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"strconv"
+
+	"github.com/spf13/cobra"
 )
 
 var deleteCmd = &cobra.Command{
@@ -11,20 +12,20 @@ var deleteCmd = &cobra.Command{
 	Short: "Delete a todo",
 	Long:  "Delete a todo and remove it from the list",
 	Args:  cobra.MinimumNArgs(1),
-	Run:   deleteTodo,
+	RunE:  deleteTodo,
 }
 
-func deleteTodo(cmd *cobra.Command, args []string) {
+func deleteTodo(cmd *cobra.Command, args []string) error {
 	todoId, err := strconv.Atoi(args[0])
 	if err != nil {
-		fmt.Printf("Error converting argument into int\n")
-		return
+		return fmt.Errorf("invalid todo ID %q", args[0])
 	}
-	defer saveTodos()
-	err = todoList.Delete(todoId)
-	if err != nil {
-		fmt.Printf("Error deleting todo with id: %s\n", err)
-		return
+	if err := todoList.Delete(todoId); err != nil {
+		return err
+	}
+	if err := saveTodos(); err != nil {
+		return err
 	}
 	fmt.Printf("Deleted todo with ID: %d\n", todoId)
+	return nil
 }

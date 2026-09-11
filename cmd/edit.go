@@ -13,18 +13,19 @@ var editCmd = &cobra.Command{
 	Short: "Edit the title of a todo",
 	Long:  "Edit the title of a todo, given the correct ID",
 	Args:  cobra.MinimumNArgs(2),
-	Run:   editTodoTitle,
+	RunE:  editTodoTitle,
 }
 
-func editTodoTitle(cmd *cobra.Command, args []string) {
+func editTodoTitle(cmd *cobra.Command, args []string) error {
 	id, err := strconv.Atoi(args[0])
 	if err != nil {
-		fmt.Printf("Error occurred converting id to int: %s\n", err)
+		return fmt.Errorf("invalid todo ID %q", args[0])
 	}
+
 	editTitle := strings.Join(args[1:], " ")
-	err = todoList.Edit(id, editTitle)
-	if err != nil {
-		fmt.Printf("Error editing todo with id: %d, and string: %s, %s\n", id, editTitle, err)
+	if err := todoList.Edit(id, editTitle); err != nil {
+		return fmt.Errorf("editing todo %d: %w", id, err)
 	}
-	saveTodos()
+
+	return saveTodos()
 }

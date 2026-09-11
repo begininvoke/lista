@@ -16,7 +16,7 @@ var addCmd = &cobra.Command{
 	Short: "Add a new todo",
 	Long:  "Add a new todo with description and optional priority (high, medium, low) and notes",
 	Args:  cobra.MinimumNArgs(1),
-	Run:   addTodo,
+	RunE:  addTodo,
 }
 
 func init() {
@@ -24,21 +24,18 @@ func init() {
 	addCmd.Flags().StringVarP(&notesFlag, "notes", "n", "", "notes (lorem ipsum)")
 }
 
-func addTodo(cmd *cobra.Command, args []string) {
+func addTodo(cmd *cobra.Command, args []string) error {
 	title := strings.Join(args, " ")
 	// Parse the priority flag
 	priority, err := models.ParsePriority(priorityFlag)
 	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return
+		return fmt.Errorf("adding todo: %w", err)
 	}
 	notes := notesFlag
 
-	err = todoList.Add(title, priority, notes)
-	if err != nil {
-		fmt.Printf("Error adding todo: %v\n", err)
-		return
+	if err := todoList.Add(title, priority, notes); err != nil {
+		return fmt.Errorf("adding todo: %w", err)
 	}
 
-	saveTodos()
+	return saveTodos()
 }

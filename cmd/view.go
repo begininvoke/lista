@@ -16,25 +16,22 @@ var viewCmd = &cobra.Command{
 	Short: "View a todo",
 	Long:  "View a todo in its entirety, with notes if present",
 	Args:  cobra.MinimumNArgs(1),
-	Run:   viewTodo,
+	RunE:  viewTodo,
 }
 
-func viewTodo(cmd *cobra.Command, args []string) {
+func viewTodo(cmd *cobra.Command, args []string) error {
 	id, err := strconv.Atoi(args[0])
 	if err != nil {
-		fmt.Println(tui.RenderError("Invalid todo ID"))
-		return
+		return fmt.Errorf("invalid todo ID %q", args[0])
 	}
 
 	todo, err := todoList.GetByID(id)
 	if err != nil {
-		fmt.Println(
-			tui.RenderError(fmt.Sprintf("No todo with ID %d exists", id)),
-		)
-		return
+		return err
 	}
 
 	renderViewText(todo)
+	return nil
 }
 
 func renderViewText(todo *models.Todo) {

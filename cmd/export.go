@@ -14,13 +14,13 @@ var exportCmd = &cobra.Command{
 	Short: "Exports todos",
 	Long:  "Exports todos to stdout in .md syntax",
 	Args:  cobra.MinimumNArgs(0),
-	Run:   exportTodos,
+	RunE:  exportTodos,
 }
 
-func exportTodos(cmd *cobra.Command, args []string) {
+func exportTodos(cmd *cobra.Command, args []string) error {
 	todos, err := storage.LoadTodos(dataFile)
 	if err != nil {
-		fmt.Printf("Error reading todos %v", err)
+		return fmt.Errorf("reading todos: %w", err)
 	}
 
 	var sb strings.Builder
@@ -42,4 +42,5 @@ func exportTodos(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Fprint(os.Stdout, sb.String())
+	return nil
 }

@@ -14,6 +14,11 @@ type msgTodoSaved struct {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Refresh relative timestamps on the heartbeat regardless of mode.
+	if _, ok := msg.(tickMsg); ok {
+		return m, tick()
+	}
+
 	var cmd tea.Cmd
 
 	// Handle form input when adding todo
