@@ -425,3 +425,63 @@ func TestTodoList_Edit(t *testing.T) {
 		})
 	}
 }
+
+func TestTodoList_AppendNotes(t *testing.T) {
+	tests := []struct {
+		name        string
+		initial     []Todo
+		id          int
+		newNotes    string
+		wantNotes   string
+		expectError bool
+	}{
+		{
+			name:      "Append to existing notes",
+			initial:   []Todo{{ID: 1, Title: "Test", Notes: "initial"}},
+			id:        1,
+			newNotes:  "more",
+			wantNotes: "initial more",
+		},
+		{
+			name:      "Set notes when empty",
+			initial:   []Todo{{ID: 1, Title: "Test", Notes: ""}},
+			id:        1,
+			newNotes:  "first",
+			wantNotes: "first",
+		},
+		{
+			name:        "Non-existent todo",
+			initial:     []Todo{{ID: 1, Title: "Test", Notes: "initial"}},
+			id:          99,
+			newNotes:    "more",
+			wantNotes:   "initial",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tl := &TodoList{
+				Todos: append([]Todo(nil), tt.initial...),
+			}
+
+			err := tl.AppendNotes(tt.id, tt.newNotes)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error appending notes to ID %d, got nil", tt.id)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("Unexpected error: %v", err)
+				return
+			}
+
+			if tl.Todos[0].Notes != tt.wantNotes {
+				t.Errorf("Expected notes '%s', got '%s'", tt.wantNotes, tl.Todos[0].Notes)
+			}
+		})
+	}
+}

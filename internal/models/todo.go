@@ -125,6 +125,20 @@ func (tl *TodoList) Edit(id int, title string) error {
 	return fmt.Errorf("todo with ID %d not found", id)
 }
 
+func (tl *TodoList) AppendNotes(id int, notes string) error {
+	for i := range tl.Todos {
+		if tl.Todos[i].ID == id {
+			if tl.Todos[i].Notes != "" {
+				tl.Todos[i].Notes += " " + notes
+			} else {
+				tl.Todos[i].Notes = notes
+			}
+			return nil
+		}
+	}
+	return fmt.Errorf("todo with ID %d not found", id)
+}
+
 func (tl *TodoList) Count() int {
 	return len(tl.Todos)
 }

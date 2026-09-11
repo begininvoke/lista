@@ -22,16 +22,9 @@ func addNotes(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid todo ID %q", args[0])
 	}
 
-	todo, err := todoList.GetByID(id)
-	if err != nil {
-		return err
-	}
 	newNotes := strings.Join(args[1:], " ")
-
-	if todo.Notes != "" {
-		todo.Notes += " " + newNotes
-	} else {
-		todo.Notes = newNotes
+	if err := todoList.AppendNotes(id, newNotes); err != nil {
+		return err
 	}
 	return saveTodos()
 }
