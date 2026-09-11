@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version string
+var version = "dev"
 var todoList *models.TodoList
 var dataFile string //$HOME/.config/lista, where our json configs live
 
