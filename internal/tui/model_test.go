@@ -1,11 +1,16 @@
 package tui
 
 import (
+	"fmt"
+	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/kwame-Owusu/lista/internal/models"
+	"github.com/kwame-Owusu/lista/internal/storage"
 )
 
 func TestNewModel(t *testing.T) {
@@ -120,4 +125,92 @@ func TestTickRefresh(t *testing.T) {
 	if _, ok := updatedForm.(model); !ok {
 		t.Errorf("Expected model back after tick, got %T", updatedForm)
 	}
+}
+
+func TestSaveTodosCmd_SnapshotsOnCall(t *testing.T) {
+	tl := models.NewTodoList()
+	for _, task := range []struct {
+		title    string
+		priority models.Priority
+		notes    string
+	}{
+		{"Buy groceries", models.Low, ""},
+		{"Walk the dog", models.Medium, ""},
+		{"Read", models.High, "chapter 3"},
+	} {
+		if err := tl.Add(task.title, task.priority, task.notes); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	m := NewModel(tl, filepath.Join(t.TempDir(), "todos.json"))
+	cmd := m.saveTodosCmd()
+
+	// Mutate the live list after the save command was created.
+	if err := tl.Toggle(1); err != nil {
+		t.Fatal(err)
+	}
+	if err := tl.Add("Should not appear", models.Low, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := tl.Delete(2); err != nil {
+		t.Fatal(err)
+	}
+
+	msg := cmd()
+	if msg == nil {
+		t.Fatal("Expected a msgTodoSaved back from the save command")
+	}
+	if savedMsg, ok := msg.(msgTodoSaved); !ok {
+		t.Fatalf("Expected msgTodoSaved, got %T", msg)
+	} else if savedMsg.err != nil {
+		t.Fatalf("Save failed: %v", savedMsg.err)
+	}
+
+	saved, err := storage.LoadTodos(m.filename)
+	if err != nil {
+		t.Fatalf("Loading saved file: %v", err)
+	}
+	if len(saved) != 3 {
+		t.Fatalf("Snapshot should have 3 todos, got %d (live list was mutated after save cmd creation)", len(saved))
+	}
+	if saved[0].Completed {
+		t.Error("Snapshot should reflect state at save command creation, not later toggles")
+	}
+}
+
+func TestSaveTodosCmd_ConcurrentSaves(t *testing.T) {
+	const todoCount = 32
+	const iterations = 300
+
+	tl := models.NewTodoList()
+	for i := 0; i < todoCount; i++ {
+		if err := tl.Add(fmt.Sprintf("todo %d", i), models.Low, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	m := NewModel(tl, filepath.Join(t.TempDir(), "todos.json"))
+
+	jobs := make(chan tea.Cmd)
+	var wg sync.WaitGroup
+
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for cmd := range jobs {
+				cmd()
+			}
+		}()
+	}
+
+	for i := 0; i < iterations; i++ {
+		if err := tl.Toggle(1 + i%todoCount); err != nil {
+			t.Fatal(err)
+		}
+		jobs <- m.saveTodosCmd()
+	}
+	close(jobs)
+	wg.Wait()
 }

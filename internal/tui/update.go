@@ -317,7 +317,9 @@ func (m *model) toggleTodo() tea.Cmd {
 }
 
 func (m *model) saveTodosCmd() tea.Cmd {
-	todos := m.todoList.Todos
+	// The save runs in its own goroutine, so snapshot the list to keep the
+	// encoder from racing with event-loop mutations (toggle, edit, delete).
+	todos := m.todoList.List()
 	filename := m.filename
 	return func() tea.Msg {
 		err := storage.SaveTodos(todos, filename)
