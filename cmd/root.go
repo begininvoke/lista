@@ -125,6 +125,8 @@ func init() {
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(completeCmd)
+	rootCmd.AddCommand(uncompleteCmd)
+	rootCmd.AddCommand(toggleCmd)
 	rootCmd.AddCommand(deleteCmd)
 	rootCmd.AddCommand(editCmd)
 	rootCmd.AddCommand(viewCmd)

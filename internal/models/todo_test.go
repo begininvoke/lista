@@ -136,6 +136,58 @@ func TestTodoList_Complete(t *testing.T) {
 	}
 }
 
+func TestTodoList_Uncomplete(t *testing.T) {
+	tl := NewTodoList()
+	tl.Add("Test todo", Low, "")
+	tl.Complete(1)
+
+	// Test uncompleting existing todo
+	err := tl.Uncomplete(1)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if tl.Todos[0].Completed {
+		t.Error("Expected todo to be pending")
+	}
+
+	// Test uncompleting non-existent todo
+	err = tl.Uncomplete(999)
+	if err == nil {
+		t.Error("Expected error when uncompleting non-existent todo")
+	}
+}
+
+func TestTodoList_Toggle(t *testing.T) {
+	tl := NewTodoList()
+	tl.Add("Test todo", Low, "")
+
+	// Test toggling existing todo
+	err := tl.Toggle(1)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if !tl.Todos[0].Completed {
+		t.Error("Expected todo to be completed after toggle")
+	}
+
+	err = tl.Toggle(1)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if tl.Todos[0].Completed {
+		t.Error("Expected todo to be pending after second toggle")
+	}
+
+	// Test toggling non-existent todo
+	err = tl.Toggle(999)
+	if err == nil {
+		t.Error("Expected error when toggling non-existent todo")
+	}
+}
+
 func TestTodoList_List(t *testing.T) {
 	tl := NewTodoList()
 	tl.Add("First todo", Low, "")
