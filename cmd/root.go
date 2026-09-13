@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -81,6 +82,11 @@ func loadTodos() error {
 			todoList.NextID = todo.ID + 1
 		}
 	}
+	// Keep the slice sorted by ID so binary-search lookups stay valid even if
+	// the data file was hand-edited out of order.
+	sort.SliceStable(todoList.Todos, func(i, j int) bool {
+		return todoList.Todos[i].ID < todoList.Todos[j].ID
+	})
 	return nil
 }
 
@@ -125,6 +131,8 @@ func init() {
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(completeCmd)
+	rootCmd.AddCommand(uncompleteCmd)
+	rootCmd.AddCommand(toggleCmd)
 	rootCmd.AddCommand(deleteCmd)
 	rootCmd.AddCommand(editCmd)
 	rootCmd.AddCommand(viewCmd)

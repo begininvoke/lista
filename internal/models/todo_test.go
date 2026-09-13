@@ -136,6 +136,58 @@ func TestTodoList_Complete(t *testing.T) {
 	}
 }
 
+func TestTodoList_Uncomplete(t *testing.T) {
+	tl := NewTodoList()
+	tl.Add("Test todo", Low, "")
+	tl.Complete(1)
+
+	// Test uncompleting existing todo
+	err := tl.Uncomplete(1)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if tl.Todos[0].Completed {
+		t.Error("Expected todo to be pending")
+	}
+
+	// Test uncompleting non-existent todo
+	err = tl.Uncomplete(999)
+	if err == nil {
+		t.Error("Expected error when uncompleting non-existent todo")
+	}
+}
+
+func TestTodoList_Toggle(t *testing.T) {
+	tl := NewTodoList()
+	tl.Add("Test todo", Low, "")
+
+	// Test toggling existing todo
+	err := tl.Toggle(1)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if !tl.Todos[0].Completed {
+		t.Error("Expected todo to be completed after toggle")
+	}
+
+	err = tl.Toggle(1)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if tl.Todos[0].Completed {
+		t.Error("Expected todo to be pending after second toggle")
+	}
+
+	// Test toggling non-existent todo
+	err = tl.Toggle(999)
+	if err == nil {
+		t.Error("Expected error when toggling non-existent todo")
+	}
+}
+
 func TestTodoList_List(t *testing.T) {
 	tl := NewTodoList()
 	tl.Add("First todo", Low, "")
@@ -638,5 +690,46 @@ func TestTodoList_AppendNotes(t *testing.T) {
 				t.Errorf("Expected notes '%s', got '%s'", tt.wantNotes, tl.Todos[0].Notes)
 			}
 		})
+	}
+}
+
+func TestTodoList_LookupWithGaps(t *testing.T) {
+	tl := NewTodoList()
+	tl.Add("One", Low, "")
+	tl.Add("Two", Low, "")
+	tl.Add("Three", Low, "")
+	tl.Add("Four", Low, "")
+
+	// Remove ID 2, leaving gaps: {1, 3, 4}
+	if err := tl.Delete(2); err != nil {
+		t.Fatalf("Unexpected error deleting ID 2: %v", err)
+	}
+
+	// GetByID should find IDs before and after the gap.
+	for _, id := range []int{1, 3, 4} {
+		todo, err := tl.GetByID(id)
+		if err != nil {
+			t.Errorf("GetByID(%d): unexpected error: %v", id, err)
+			continue
+		}
+		if todo.ID != id {
+			t.Errorf("GetByID(%d): got ID %d", id, todo.ID)
+		}
+	}
+
+	// Mutations by ID should still work across the gap.
+	if err := tl.Toggle(3); err != nil {
+		t.Errorf("Toggle(3): unexpected error: %v", err)
+	}
+	if err := tl.Complete(1); err != nil {
+		t.Errorf("Complete(1): unexpected error: %v", err)
+	}
+	if err := tl.Edit(4, "Four (edited)"); err != nil {
+		t.Errorf("Edit(4): unexpected error: %v", err)
+	}
+
+	// The removed ID must still be reported as missing.
+	if _, err := tl.GetByID(2); err == nil {
+		t.Error("Expected GetByID(2) to fail after delete")
 	}
 }

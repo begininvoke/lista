@@ -1,8 +1,10 @@
 package models
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -98,6 +100,18 @@ func (tl *TodoList) Add(title string, priority Priority, notes string) error {
 	return nil
 }
 
+// findIndex returns the index of the todo with the given id using binary
+// search. Assumes tl.Todos is sorted ascending by ID.
+func (tl *TodoList) findIndex(id int) int {
+	idx, found := slices.BinarySearchFunc(tl.Todos, id, func(t Todo, id int) int {
+		return cmp.Compare(t.ID, id)
+	})
+	if !found {
+		return -1
+	}
+	return idx
+}
+
 func (tl *TodoList) Update(id int, title string, priority Priority, notes string) error {
 	if err := validateTitle(title); err != nil {
 		return err
@@ -109,26 +123,32 @@ func (tl *TodoList) Update(id int, title string, priority Priority, notes string
 		return err
 	}
 
-	for i := range tl.Todos {
-		if tl.Todos[i].ID == id {
-			tl.Todos[i].Title = title
-			tl.Todos[i].Priority = priority
-			tl.Todos[i].Notes = notes
-			return nil
-		}
+	i := tl.findIndex(id)
+	if i < 0 {
+		return errors.New("todo not found")
 	}
-
-	return errors.New("todo not found")
+	tl.Todos[i].Title = title
+	tl.Todos[i].Priority = priority
+	tl.Todos[i].Notes = notes
+	return nil
 }
 
 func (tl *TodoList) Complete(id int) error {
-	for i := range tl.Todos {
-		if tl.Todos[i].ID == id {
-			tl.Todos[i].Completed = true
-			return nil
-		}
+	i := tl.findIndex(id)
+	if i < 0 {
+		return fmt.Errorf("todo with ID %d not found", id)
 	}
-	return fmt.Errorf("todo with ID %d not found", id)
+	tl.Todos[i].Completed = true
+	return nil
+}
+
+func (tl *TodoList) Uncomplete(id int) error {
+	i := tl.findIndex(id)
+	if i < 0 {
+		return fmt.Errorf("todo with ID %d not found", id)
+	}
+	tl.Todos[i].Completed = false
+	return nil
 }
 
 // List returns a copy of the todos so callers can read or mutate the
@@ -144,23 +164,20 @@ func (tl *TodoList) GetByID(id int) (*Todo, error) {
 		return nil, fmt.Errorf("no entries in todo list")
 	}
 
-	for i := range tl.Todos {
-		if tl.Todos[i].ID == id {
-			return &tl.Todos[i], nil
-		}
+	i := tl.findIndex(id)
+	if i < 0 {
+		return nil, fmt.Errorf("todo item with id %d not found", id)
 	}
-
-	return nil, fmt.Errorf("todo item with id %d not found", id)
+	return &tl.Todos[i], nil
 }
 
 func (tl *TodoList) Delete(id int) error {
-	for i, todo := range tl.Todos {
-		if todo.ID == id {
-			tl.Todos = append(tl.Todos[:i], tl.Todos[i+1:]...)
-			return nil
-		}
+	i := tl.findIndex(id)
+	if i < 0 {
+		return fmt.Errorf("todo with ID %d not found", id)
 	}
-	return fmt.Errorf("todo with ID %d not found", id)
+	tl.Todos = append(tl.Todos[:i], tl.Todos[i+1:]...)
+	return nil
 }
 
 func (tl *TodoList) Edit(id int, title string) error {
@@ -168,30 +185,28 @@ func (tl *TodoList) Edit(id int, title string) error {
 		return err
 	}
 
-	for i := range tl.Todos {
-		if tl.Todos[i].ID == id {
-			tl.Todos[i].Title = title
-			return nil
-		}
+	i := tl.findIndex(id)
+	if i < 0 {
+		return fmt.Errorf("todo with ID %d not found", id)
 	}
-	return fmt.Errorf("todo with ID %d not found", id)
+	tl.Todos[i].Title = title
+	return nil
 }
 
 func (tl *TodoList) AppendNotes(id int, notes string) error {
-	for i := range tl.Todos {
-		if tl.Todos[i].ID == id {
-			newNotes := notes
-			if tl.Todos[i].Notes != "" {
-				newNotes = tl.Todos[i].Notes + " " + notes
-			}
-			if err := validateNotes(newNotes); err != nil {
-				return err
-			}
-			tl.Todos[i].Notes = newNotes
-			return nil
-		}
+	i := tl.findIndex(id)
+	if i < 0 {
+		return fmt.Errorf("todo with ID %d not found", id)
 	}
-	return fmt.Errorf("todo with ID %d not found", id)
+	newNotes := notes
+	if tl.Todos[i].Notes != "" {
+		newNotes = tl.Todos[i].Notes + " " + notes
+	}
+	if err := validateNotes(newNotes); err != nil {
+		return err
+	}
+	tl.Todos[i].Notes = newNotes
+	return nil
 }
 
 func (tl *TodoList) Count() int {
@@ -239,11 +254,10 @@ func (tl *TodoList) GetCompleted() []Todo {
 
 // Toggle completion status
 func (tl *TodoList) Toggle(id int) error {
-	for i := range tl.Todos {
-		if tl.Todos[i].ID == id {
-			tl.Todos[i].Completed = !tl.Todos[i].Completed
-			return nil
-		}
+	i := tl.findIndex(id)
+	if i < 0 {
+		return fmt.Errorf("todo with ID %d not found", id)
 	}
-	return fmt.Errorf("todo with ID %d not found", id)
+	tl.Todos[i].Completed = !tl.Todos[i].Completed
+	return nil
 }
