@@ -45,6 +45,10 @@ func TestNewModel(t *testing.T) {
 		t.Error("Expected confirmPurge to be false")
 	}
 
+	if m.showHelp {
+		t.Error("Expected showHelp to be false")
+	}
+
 	if m.focusedField != fieldTitle {
 		t.Errorf("Expected focusedField to be fieldTitle, got %v", m.focusedField)
 	}
@@ -114,6 +118,80 @@ func TestPurgeCompleted(t *testing.T) {
 	}
 	if purgeModel.todoList.Todos[0].Title != "Pending task" {
 		t.Errorf("Expected 'Pending task' to remain, got '%s'", purgeModel.todoList.Todos[0].Title)
+	}
+}
+
+func TestHelpOverlay(t *testing.T) {
+	tl := models.NewTodoList()
+	if err := tl.Add("Task", models.Low, ""); err != nil {
+		t.Fatal(err)
+	}
+	m := NewModel(tl, filepath.Join(t.TempDir(), "todos.json"))
+
+	// '?' opens the help overlay.
+	upd, _ := m.Update(keyMsg("?"))
+	hm, ok := upd.(model)
+	if !ok {
+		t.Fatalf("Expected model after Update, got %T", upd)
+	}
+	if !hm.showHelp {
+		t.Fatal("Expected showHelp to be true after pressing ?")
+	}
+	if !strings.Contains(hm.View(), "KEYBINDINGS") {
+		t.Error("Expected help overlay to render KEYBINDINGS")
+	}
+
+	// Navigation is ignored while the overlay is open.
+	upd, _ = hm.Update(keyMsg("k"))
+	hm, _ = upd.(model)
+	if !hm.showHelp {
+		t.Error("Expected help overlay to stay open on non-help keys")
+	}
+	if hm.cursor != 0 {
+		t.Errorf("Expected cursor unchanged while help open, got %d", hm.cursor)
+	}
+
+	// 'esc' closes the overlay.
+	upd, _ = hm.Update(keyMsg("esc"))
+	hm, _ = upd.(model)
+	if hm.showHelp {
+		t.Error("Expected showHelp to be false after esc")
+	}
+
+	// '?' toggles: reopen, then close again.
+	upd, _ = hm.Update(keyMsg("?"))
+	hm, _ = upd.(model)
+	if !hm.showHelp {
+		t.Fatal("Expected showHelp to be true after reopening with ?")
+	}
+	upd, _ = hm.Update(keyMsg("?"))
+	hm, _ = upd.(model)
+	if hm.showHelp {
+		t.Error("Expected showHelp to be false after ? while open")
+	}
+
+	// 'q' quits while the overlay is open.
+	upd, _ = hm.Update(keyMsg("?"))
+	hm, _ = upd.(model)
+	if !hm.showHelp {
+		t.Fatal("Expected showHelp to be true before quit test")
+	}
+	if _, cmd := hm.Update(keyMsg("q")); cmd == nil {
+		t.Error("Expected a quit command after pressing q while help open")
+	}
+
+	// '?' is ignored while a confirmation modal is active.
+	upd, _ = hm.Update(keyMsg("?"))
+	hm, _ = upd.(model)
+	upd, _ = hm.Update(keyMsg("d"))
+	hm, _ = upd.(model)
+	if !hm.confirmDelete {
+		t.Fatal("Expected confirmDelete to be true after pressing d")
+	}
+	upd, _ = hm.Update(keyMsg("?"))
+	hm, _ = upd.(model)
+	if hm.showHelp {
+		t.Error("Expected help to stay closed while a confirmation modal is active")
 	}
 }
 
