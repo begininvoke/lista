@@ -32,13 +32,30 @@ func exportTodos(cmd *cobra.Command, args []string) error {
 		if todo.Completed {
 			checked = "x"
 		}
-		fmt.Fprintf(&sb, "- [%s] %s\n", checked, todo.Title)
+		details := fmt.Sprintf("(%s", todo.Priority)
+		if !todo.CreatedAt.IsZero() {
+			details += fmt.Sprintf(" %s", todo.CreatedAt.Format("2006-01-02"))
+		}
+		details += ")"
+		fmt.Fprintf(&sb, "- [%s] %s %s\n", checked, todo.Title, details)
 	}
 
-	sb.WriteString("\n")
-	sb.WriteString("## Notes\n")
+	hasNotes := false
 	for _, todo := range todos {
-		fmt.Fprintf(&sb, "- %s: %s\n", todo.Title, todo.Notes)
+		if strings.TrimSpace(todo.Notes) != "" {
+			hasNotes = true
+			break
+		}
+	}
+
+	if hasNotes {
+		sb.WriteString("\n## Notes\n")
+		for _, todo := range todos {
+			if strings.TrimSpace(todo.Notes) == "" {
+				continue
+			}
+			fmt.Fprintf(&sb, "- **%s**\n  %s\n", todo.Title, todo.Notes)
+		}
 	}
 
 	fmt.Fprint(os.Stdout, sb.String())
