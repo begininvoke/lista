@@ -38,6 +38,7 @@ type model struct {
 	err           error
 	confirmDelete bool
 	deleteID      int
+	confirmPurge  bool
 
 	// Form state
 	addingTodo   bool

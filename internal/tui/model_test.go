@@ -41,6 +41,10 @@ func TestNewModel(t *testing.T) {
 		t.Error("Expected confirmDelete to be false")
 	}
 
+	if m.confirmPurge {
+		t.Error("Expected confirmPurge to be false")
+	}
+
 	if m.focusedField != fieldTitle {
 		t.Errorf("Expected focusedField to be fieldTitle, got %v", m.focusedField)
 	}
@@ -55,6 +59,61 @@ func TestNewModel(t *testing.T) {
 
 	if m.notesInput.Placeholder != "Add notes (optional)..." {
 		t.Errorf("Expected notes placeholder 'Add notes (optional)...', got '%s'", m.notesInput.Placeholder)
+	}
+}
+
+func keyMsg(key string) tea.KeyMsg {
+	return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(key)}
+}
+
+func TestPurgeCompleted(t *testing.T) {
+	tl := models.NewTodoList()
+	if err := tl.Add("Done task", models.Low, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := tl.Add("Pending task", models.Medium, ""); err != nil {
+		t.Fatal(err)
+	}
+	tl.Todos[0].Completed = true
+
+	m := NewModel(tl, filepath.Join(t.TempDir(), "todos.json"))
+
+	// 'c' opens the purge confirmation modal.
+	upd, _ := m.Update(keyMsg("c"))
+	purgeModel, ok := upd.(model)
+	if !ok {
+		t.Fatalf("Expected model after Update, got %T", upd)
+	}
+	if !purgeModel.confirmPurge {
+		t.Fatal("Expected confirmPurge to be true after pressing c")
+	}
+	if !strings.Contains(purgeModel.View(), "Purge all completed todos?") {
+		t.Error("Expected purge confirmation text in the rendered view")
+	}
+
+	// 'n' cancels without removing anything.
+	upd, _ = purgeModel.Update(keyMsg("n"))
+	purgeModel, _ = upd.(model)
+	if purgeModel.confirmPurge {
+		t.Error("Expected confirmPurge to be false after pressing n")
+	}
+	if purgeModel.todoList.Count() != 2 {
+		t.Errorf("Expected 2 todos after cancel, got %d", purgeModel.todoList.Count())
+	}
+
+	// 'c' then 'y' purges completed todos.
+	upd, _ = purgeModel.Update(keyMsg("c"))
+	purgeModel, _ = upd.(model)
+	upd, _ = purgeModel.Update(keyMsg("y"))
+	purgeModel, _ = upd.(model)
+	if purgeModel.confirmPurge {
+		t.Error("Expected confirmPurge to be false after confirming")
+	}
+	if purgeModel.todoList.Count() != 1 {
+		t.Errorf("Expected 1 todo after purge, got %d", purgeModel.todoList.Count())
+	}
+	if purgeModel.todoList.Todos[0].Title != "Pending task" {
+		t.Errorf("Expected 'Pending task' to remain, got '%s'", purgeModel.todoList.Todos[0].Title)
 	}
 }
 

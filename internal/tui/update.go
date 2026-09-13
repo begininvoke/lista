@@ -36,9 +36,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "y", "enter":
 			if m.confirmDelete {
 				cmd = m.deleteTodo()
+			} else if m.confirmPurge {
+				cmd = m.purgeCompleted()
 			}
 		case "n", "esc":
-			m.cancelDelete()
+			if m.confirmDelete {
+				m.cancelDelete()
+			} else if m.confirmPurge {
+				m.cancelPurge()
+			}
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		case "up", "k":
@@ -49,6 +55,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmd = m.toggleTodo()
 		case "d", "x":
 			m.confirmDeleteAtCursor()
+		case "c":
+			m.startPurge()
 		case "a":
 			m.startAddTodo()
 		case "e":
@@ -333,12 +341,50 @@ func (m *model) cancelDelete() {
 }
 
 func (m *model) confirmDeleteAtCursor() {
+	if m.confirmPurge {
+		return
+	}
 	todos := m.todoList.Todos
 	if len(todos) == 0 || m.cursor >= len(todos) {
 		return
 	}
 	m.confirmDelete = true
 	m.deleteID = todos[m.cursor].ID
+}
+
+func (m *model) startPurge() {
+	if m.confirmDelete {
+		return
+	}
+
+	for _, t := range m.todoList.Todos {
+		if t.Completed {
+			m.confirmPurge = true
+			return
+		}
+	}
+
+	m.err = errors.New("No completed todos to purge.")
+}
+
+func (m *model) purgeCompleted() tea.Cmd {
+	kept := m.todoList.Todos[:0]
+	for _, t := range m.todoList.Todos {
+		if !t.Completed {
+			kept = append(kept, t)
+		}
+	}
+	m.todoList.Todos = kept
+	m.confirmPurge = false
+
+	if m.cursor >= len(m.todoList.Todos) && m.cursor > 0 {
+		m.cursor--
+	}
+	return m.saveTodosCmd()
+}
+
+func (m *model) cancelPurge() {
+	m.confirmPurge = false
 }
 
 func (m *model) moveCursorUp() {
