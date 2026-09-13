@@ -1,7 +1,6 @@
 package config
 
 import (
-	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -34,17 +33,16 @@ func TestBaseConfigDirWithXDG(t *testing.T) {
 func TestBaseConfigDirFallback(t *testing.T) {
 	unixOnly(t)
 
+	home := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", "")
-	if os.Getenv("HOME") == "" {
-		t.Skip("HOME is not set")
-	}
+	t.Setenv("HOME", home)
 
 	got, err := baseConfigDir()
 	if err != nil {
 		t.Fatalf("baseConfigDir() error: %v", err)
 	}
 
-	want := filepath.Join(os.Getenv("HOME"), ".config", "lista")
+	want := filepath.Join(home, ".config", "lista")
 	if got != want {
 		t.Errorf("baseConfigDir() = %q, want %q", got, want)
 	}
@@ -62,20 +60,42 @@ func TestFilePaths(t *testing.T) {
 		{"config", ConfigFilePath, "lista.config.json"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			xdg := t.TempDir()
-			t.Setenv("XDG_CONFIG_HOME", xdg)
+	t.Run("xdg", func(t *testing.T) {
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				xdg := t.TempDir()
+				t.Setenv("XDG_CONFIG_HOME", xdg)
 
-			got, err := tt.fn()
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+				got, err := tt.fn()
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
 
-			want := filepath.Join(xdg, "lista", tt.file)
-			if got != want {
-				t.Errorf("got %q, want %q", got, want)
-			}
-		})
-	}
+				want := filepath.Join(xdg, "lista", tt.file)
+				if got != want {
+					t.Errorf("got %q, want %q", got, want)
+				}
+			})
+		}
+	})
+
+	t.Run("home", func(t *testing.T) {
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				home := t.TempDir()
+				t.Setenv("XDG_CONFIG_HOME", "")
+				t.Setenv("HOME", home)
+
+				got, err := tt.fn()
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+
+				want := filepath.Join(home, ".config", "lista", tt.file)
+				if got != want {
+					t.Errorf("got %q, want %q", got, want)
+				}
+			})
+		}
+	})
 }
