@@ -123,11 +123,8 @@ func (m model) renderHelp() string {
 func (m model) renderDeleteModal() string {
 	todos := m.todoList.Todos
 	var title string
-	for _, t := range todos {
-		if t.ID == m.deleteID {
-			title = t.Title
-			break
-		}
+	if idx := findTodoIndexByID(todos, m.deleteID); idx >= 0 {
+		title = todos[idx].Title
 	}
 
 	modal := lipgloss.Place(

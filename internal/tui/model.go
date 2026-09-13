@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"cmp"
+	"slices"
 	"time"
 
 	"github.com/charmbracelet/bubbles/textarea"
@@ -80,13 +82,16 @@ func (m model) Init() tea.Cmd {
 	return tick()
 }
 
+// findTodoIndexByID returns the index of the todo with the given id using
+// binary search. Assumes todos is sorted ascending by ID.
 func findTodoIndexByID(todos []models.Todo, id int) int {
-	for i, t := range todos {
-		if t.ID == id {
-			return i
-		}
+	idx, found := slices.BinarySearchFunc(todos, id, func(t models.Todo, id int) int {
+		return cmp.Compare(t.ID, id)
+	})
+	if !found {
+		return -1
 	}
-	return -1
+	return idx
 }
 
 var priorityOptions = []models.Priority{models.Low, models.Medium, models.High}
