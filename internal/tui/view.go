@@ -13,6 +13,10 @@ func (m model) View() string {
 		return m.renderDeleteModal()
 	}
 
+	if m.confirmPurge {
+		return m.renderPurgeModal()
+	}
+
 	if m.addingTodo {
 		return m.renderAddForm()
 	}
@@ -117,7 +121,7 @@ func (m model) renderCompletedCount(todos []models.Todo) string {
 }
 
 func (m model) renderHelp() string {
-	return helpStyle.Render("\n↑/↓: navigate • space: toggle • a: add • d: delete • e: edit • q: quit")
+	return helpStyle.Render("\n↑/↓: navigate • space: toggle • a: add • c: purge • d: delete • e: edit • q: quit")
 }
 
 func (m model) renderDeleteModal() string {
@@ -136,6 +140,29 @@ func (m model) renderDeleteModal() string {
 			fmt.Sprintf(
 				"Delete \"%s\"?\n\n%s",
 				title,
+				cursorStyle.Render("y: confirm • n / esc: cancel"),
+			),
+		),
+	)
+
+	return lipgloss.Place(
+		m.width,
+		m.height,
+		lipgloss.Center,
+		lipgloss.Center,
+		modal,
+	)
+}
+
+func (m model) renderPurgeModal() string {
+	modal := lipgloss.Place(
+		m.width,
+		m.height,
+		lipgloss.Center,
+		lipgloss.Center,
+		modalStyle.Render(
+			fmt.Sprintf(
+				"Purge all completed todos?\n\n%s",
 				cursorStyle.Render("y: confirm • n / esc: cancel"),
 			),
 		),
