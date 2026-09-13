@@ -71,6 +71,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if !m.confirmDelete && !m.confirmPurge {
 				m.showHelp = true
 			}
+		case "u":
+			if !m.confirmDelete && !m.confirmPurge {
+				cmd = m.performUndo()
+			}
 		case "a":
 			m.startAddTodo()
 		case "e":
@@ -296,6 +300,7 @@ func (m *model) updateTodo() tea.Cmd {
 
 	notes := strings.TrimSpace(m.notesInput.Value())
 
+	m.pushUndo()
 	err := m.todoList.Update(m.editingID, title, m.priority, notes)
 	if err != nil {
 		m.err = err
@@ -307,6 +312,7 @@ func (m *model) updateTodo() tea.Cmd {
 }
 
 func (m *model) deleteTodo() tea.Cmd {
+	m.pushUndo()
 	err := m.todoList.Delete(m.deleteID)
 	if err != nil {
 		m.err = err
@@ -326,6 +332,7 @@ func (m *model) toggleTodo() tea.Cmd {
 		return nil
 	}
 	selectedID := todos[m.cursor].ID
+	m.pushUndo()
 	if err := m.todoList.Toggle(selectedID); err != nil {
 		m.err = err
 		return nil

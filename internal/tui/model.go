@@ -29,6 +29,13 @@ const (
 	fieldNotes
 )
 
+const maxUndoEntries = 10
+
+type undoEntry struct {
+	snapshot models.TodoList
+	cursor   int
+}
+
 type model struct {
 	todoList      *models.TodoList
 	cursor        int // which todo is selected
@@ -40,6 +47,7 @@ type model struct {
 	deleteID      int
 	confirmPurge  bool
 	showHelp      bool
+	undoStack     []undoEntry
 
 	// Form state
 	addingTodo   bool
@@ -78,6 +86,45 @@ func NewModel(todoList *models.TodoList, filename string) model {
 		addingTodo:   false,
 		focusedField: fieldTitle,
 	}
+}
+
+// cloneTodoList returns a copy of the todo list so an undo snapshot can be
+// restored without aliasing the live list. Todo is made of value fields, so
+// copying the slice is sufficient for isolation.
+func cloneTodoList(tl *models.TodoList) models.TodoList {
+	return models.TodoList{
+		Todos:  append([]models.Todo(nil), tl.Todos...),
+		NextID: tl.NextID,
+	}
+}
+
+// pushUndo records the current list state and cursor so the most recent
+// toggle, delete, or edit can be reverted. The stack is bounded to
+// maxUndoEntries, evicting the oldest snapshot when full.
+func (m *model) pushUndo() {
+	m.undoStack = append(m.undoStack, undoEntry{
+		snapshot: cloneTodoList(m.todoList),
+		cursor:   m.cursor,
+	})
+	if len(m.undoStack) > maxUndoEntries {
+		m.undoStack = m.undoStack[1:]
+	}
+}
+
+// performUndo restores the most recent undoable action and re-saves to disk.
+// It returns nil when there is nothing to undo.
+func (m *model) performUndo() tea.Cmd {
+	if len(m.undoStack) == 0 {
+		return nil
+	}
+
+	entry := m.undoStack[len(m.undoStack)-1]
+	m.undoStack = m.undoStack[:len(m.undoStack)-1]
+
+	m.todoList.Todos = append([]models.Todo(nil), entry.snapshot.Todos...)
+	m.todoList.NextID = entry.snapshot.NextID
+	m.cursor = entry.cursor
+	return m.saveTodosCmd()
 }
 
 func (m model) Init() tea.Cmd {

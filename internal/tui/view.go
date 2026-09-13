@@ -125,7 +125,7 @@ func (m model) renderCompletedCount(todos []models.Todo) string {
 }
 
 func (m model) renderHelp() string {
-	return helpStyle.Render("\n↑/↓: navigate • space: toggle • a: add • ?: help • q: quit")
+	return helpStyle.Render("\n↑/↓: navigate • space: toggle • a: add • u: undo • ?: help • q: quit")
 }
 
 func (m model) renderDeleteModal() string {
@@ -199,12 +199,12 @@ func (m model) renderHelpOverlay() string {
 	keys := []string{
 		"↑ / k", "↓ / j", "space", "a", "e", "d / x", "c",
 		"y / enter", "n / esc",
-		"tab / shift+tab", "← / →", "enter / ctrl+s", "?", "q / ctrl+c",
+		"tab / shift+tab", "← / →", "enter / ctrl+s", "u", "?", "q / ctrl+c",
 	}
 	actions := []string{
 		"move up", "move down", "toggle complete", "add todo", "edit todo", "delete todo", "purge completed",
 		"confirm", "cancel",
-		"next / previous field", "change priority", "save form", "show this help", "quit",
+		"next / previous field", "change priority", "save form", "undo last action", "show this help", "quit",
 	}
 
 	kw := maxWidth(keys)
