@@ -351,3 +351,231 @@ func TestSaveTodosCmd_ConcurrentSaves(t *testing.T) {
 	close(jobs)
 	wg.Wait()
 }
+
+func executeCmd(t *testing.T, cmd tea.Cmd) {
+	t.Helper()
+	if cmd == nil {
+		t.Fatal("Expected a command to execute")
+	}
+	if msg := cmd(); msg == nil {
+		t.Fatal("Expected a msgTodoSaved back from the save command")
+	}
+}
+
+func TestUndoToggle(t *testing.T) {
+	tl := models.NewTodoList()
+	if err := tl.Add("Task", models.Low, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	file := filepath.Join(t.TempDir(), "todos.json")
+	m := NewModel(tl, file)
+
+	// Space completes the todo.
+	upd, cmd := m.Update(keyMsg(" "))
+	tm, _ := upd.(model)
+	if !tm.todoList.Todos[0].Completed {
+		t.Fatal("Expected todo to be completed after space")
+	}
+	executeCmd(t, cmd)
+
+	// u undoes the toggle back to pending.
+	upd, cmd = tm.Update(keyMsg("u"))
+	tm, _ = upd.(model)
+	if tm.todoList.Todos[0].Completed {
+		t.Error("Expected todo to be pending after undo")
+	}
+	executeCmd(t, cmd)
+
+	saved, err := storage.LoadTodos(file)
+	if err != nil {
+		t.Fatalf("Loading saved file: %v", err)
+	}
+	if len(saved) != 1 || saved[0].Completed {
+		t.Error("Expected an uncompleted todo persisted after undo")
+	}
+	if len(tm.undoStack) != 0 {
+		t.Error("Expected undo stack to be empty after undoing the only action")
+	}
+}
+
+func TestUndoDelete(t *testing.T) {
+	tl := models.NewTodoList()
+	if err := tl.Add("To keep", models.Low, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := tl.Add("To delete", models.Medium, ""); err != nil {
+		t.Fatal(err)
+	}
+	secondID := tl.Todos[1].ID
+	nextID := tl.NextID
+
+	file := filepath.Join(t.TempDir(), "todos.json")
+	m := NewModel(tl, file)
+
+	// Move cursor to the second todo and delete it.
+	m.cursor = 1
+	upd, _ := m.Update(keyMsg("d"))
+	tm, _ := upd.(model)
+	if !tm.confirmDelete {
+		t.Fatal("Expected confirmDelete to be true after pressing d")
+	}
+	upd, cmd := tm.Update(keyMsg("y"))
+	tm, _ = upd.(model)
+	executeCmd(t, cmd)
+	if tm.todoList.Count() != 1 {
+		t.Fatalf("Expected 1 todo after delete, got %d", tm.todoList.Count())
+	}
+	if _, err := tm.todoList.GetByID(secondID); err == nil {
+		t.Fatal("Expected deleted todo to be gone")
+	}
+
+	// u restores it with the same ID.
+	upd, cmd = tm.Update(keyMsg("u"))
+	tm, _ = upd.(model)
+	executeCmd(t, cmd)
+	if tm.todoList.Count() != 2 {
+		t.Fatalf("Expected 2 todos after undo, got %d", tm.todoList.Count())
+	}
+	restored, err := tm.todoList.GetByID(secondID)
+	if err != nil {
+		t.Fatalf("Expected deleted todo to be restored: %v", err)
+	}
+	if restored.Title != "To delete" {
+		t.Errorf("Expected restored title 'To delete', got '%s'", restored.Title)
+	}
+	if tm.todoList.NextID != nextID {
+		t.Errorf("Expected NextID %d after undo, got %d", nextID, tm.todoList.NextID)
+	}
+	if tm.cursor != 1 {
+		t.Errorf("Expected cursor back at 1 after undo, got %d", tm.cursor)
+	}
+}
+
+func TestUndoEdit(t *testing.T) {
+	tl := models.NewTodoList()
+	if err := tl.Add("Original", models.Low, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	file := filepath.Join(t.TempDir(), "todos.json")
+	m := NewModel(tl, file)
+
+	// Open the edit form and change the title.
+	upd, _ := m.Update(keyMsg("e"))
+	em, _ := upd.(model)
+	if !em.editingTodo {
+		t.Fatal("Expected editingTodo to be true after pressing e")
+	}
+	em.titleInput.SetValue("Changed")
+	upd, cmd := em.Update(keyMsg("ctrl+s"))
+	tm, _ := upd.(model)
+	executeCmd(t, cmd)
+	if tm.todoList.Todos[0].Title != "Changed" {
+		t.Fatalf("Expected title 'Changed' after edit, got '%s'", tm.todoList.Todos[0].Title)
+	}
+
+	// u restores the original title.
+	upd, cmd = tm.Update(keyMsg("u"))
+	tm, _ = upd.(model)
+	executeCmd(t, cmd)
+	if tm.todoList.Todos[0].Title != "Original" {
+		t.Errorf("Expected title 'Original' after undo, got '%s'", tm.todoList.Todos[0].Title)
+	}
+}
+
+func TestUndoEmptyStackIsNoop(t *testing.T) {
+	tl := models.NewTodoList()
+	if err := tl.Add("Task", models.Low, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	m := NewModel(tl, filepath.Join(t.TempDir(), "todos.json"))
+	upd, cmd := m.Update(keyMsg("u"))
+	tm, _ := upd.(model)
+
+	if cmd != nil {
+		t.Error("Expected no command when there is nothing to undo")
+	}
+	if tm.todoList.Todos[0].Title != "Task" {
+		t.Error("Expected no state change when undoing with an empty stack")
+	}
+	if len(tm.undoStack) != 0 {
+		t.Error("Expected undo stack to stay empty")
+	}
+}
+
+func TestUndoStackIsBounded(t *testing.T) {
+	tl := models.NewTodoList()
+	if err := tl.Add("Task", models.Low, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	m := NewModel(tl, filepath.Join(t.TempDir(), "todos.json"))
+
+	// Toggle repeatedly so the oldest snapshots are evicted.
+	tm := m
+	for i := 0; i < maxUndoEntries+1; i++ {
+		upd, _ := tm.Update(keyMsg(" "))
+		tm, _ = upd.(model)
+	}
+	if len(tm.undoStack) != maxUndoEntries {
+		t.Fatalf("Expected undo stack capped at %d, got %d", maxUndoEntries, len(tm.undoStack))
+	}
+
+	// Undoing maxUndoEntries times reverts to the state after the first toggle,
+	// which no longer undoable because it was evicted.
+	for i := 0; i < maxUndoEntries; i++ {
+		upd, _ := tm.Update(keyMsg("u"))
+		tm, _ = upd.(model)
+	}
+	if len(tm.undoStack) != 0 {
+		t.Fatalf("Expected undo stack empty after all undos, got %d", len(tm.undoStack))
+	}
+
+	// The todo keeps its completed state from the first toggle.
+	if !tm.todoList.Todos[0].Completed {
+		t.Error("Expected first (evicted) toggle to remain applied")
+	}
+}
+
+func TestUndoIgnoredWhileModalsOpen(t *testing.T) {
+	tl := models.NewTodoList()
+	if err := tl.Add("Task", models.Low, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	m := NewModel(tl, filepath.Join(t.TempDir(), "todos.json"))
+
+	// u is ignored while the delete confirmation modal is open.
+	upd, _ := m.Update(keyMsg("d"))
+	dm, _ := upd.(model)
+	upd, cmd := dm.Update(keyMsg("u"))
+	dm, _ = upd.(model)
+	if cmd != nil {
+		t.Error("Expected no command when undoing while confirm modal is open")
+	}
+	if !dm.confirmDelete {
+		t.Error("Expected confirm modal to stay open")
+	}
+	if len(dm.undoStack) != 0 {
+		t.Error("Expected no undo snapshot pushed while modal is open")
+	}
+
+	// u is ignored while the help overlay is open.
+	upd, _ = dm.Update(keyMsg("n"))
+	hm, _ := upd.(model)
+	upd, _ = hm.Update(keyMsg("?"))
+	hm, _ = upd.(model)
+	if !hm.showHelp {
+		t.Fatal("Expected help overlay to be open")
+	}
+	upd, cmd = hm.Update(keyMsg("u"))
+	hm, _ = upd.(model)
+	if cmd != nil {
+		t.Error("Expected no undo command while help overlay is open")
+	}
+	if !hm.showHelp {
+		t.Error("Expected help overlay to stay open")
+	}
+}
