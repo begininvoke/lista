@@ -32,6 +32,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		if m.showHelp {
+			switch msg.String() {
+			case "?", "esc":
+				m.showHelp = false
+			case "q", "ctrl+c":
+				return m, tea.Quit
+			}
+			return m, cmd
+		}
+
 		switch msg.String() {
 		case "y", "enter":
 			if m.confirmDelete {
@@ -57,6 +67,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.confirmDeleteAtCursor()
 		case "c":
 			m.startPurge()
+		case "?":
+			if !m.confirmDelete && !m.confirmPurge {
+				m.showHelp = true
+			}
 		case "a":
 			m.startAddTodo()
 		case "e":

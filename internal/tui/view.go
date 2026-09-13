@@ -17,6 +17,10 @@ func (m model) View() string {
 		return m.renderPurgeModal()
 	}
 
+	if m.showHelp {
+		return m.renderHelpOverlay()
+	}
+
 	if m.addingTodo {
 		return m.renderAddForm()
 	}
@@ -121,7 +125,7 @@ func (m model) renderCompletedCount(todos []models.Todo) string {
 }
 
 func (m model) renderHelp() string {
-	return helpStyle.Render("\n↑/↓: navigate • space: toggle • a: add • c: purge • d: delete • e: edit • q: quit")
+	return helpStyle.Render("\n↑/↓: navigate • space: toggle • a: add • ?: help • q: quit")
 }
 
 func (m model) renderDeleteModal() string {
@@ -174,6 +178,52 @@ func (m model) renderPurgeModal() string {
 		lipgloss.Center,
 		lipgloss.Center,
 		modal,
+	)
+}
+
+func (m model) helpRow(rawKeys, action string, keyWidth int) string {
+	return cursorStyle.Render(fmt.Sprintf("%-*s", keyWidth, rawKeys)) + "  " + itemStyle.Render(action)
+}
+
+func maxWidth(keys []string) int {
+	w := 0
+	for _, k := range keys {
+		if l := len([]rune(k)); l > w {
+			w = l
+		}
+	}
+	return w
+}
+
+func (m model) renderHelpOverlay() string {
+	keys := []string{
+		"↑ / k", "↓ / j", "space", "a", "e", "d / x", "c",
+		"y / enter", "n / esc",
+		"tab / shift+tab", "← / →", "enter / ctrl+s", "?", "q / ctrl+c",
+	}
+	actions := []string{
+		"move up", "move down", "toggle complete", "add todo", "edit todo", "delete todo", "purge completed",
+		"confirm", "cancel",
+		"next / previous field", "change priority", "save form", "show this help", "quit",
+	}
+
+	kw := maxWidth(keys)
+
+	var lines []string
+	for i, k := range keys {
+		lines = append(lines, m.helpRow(k, actions[i], kw))
+	}
+
+	content := titleStyle.Render("KEYBINDINGS") + "\n\n" +
+		strings.Join(lines, "\n") + "\n\n" +
+		helpStyle.Render("esc / ? to close")
+
+	return lipgloss.Place(
+		m.width,
+		m.height,
+		lipgloss.Center,
+		lipgloss.Center,
+		modalStyle.Render(content),
 	)
 }
 

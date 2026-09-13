@@ -39,6 +39,7 @@ type model struct {
 	confirmDelete bool
 	deleteID      int
 	confirmPurge  bool
+	showHelp      bool
 
 	// Form state
 	addingTodo   bool
