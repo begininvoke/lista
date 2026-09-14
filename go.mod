@@ -1,12 +1,12 @@
 module github.com/kwame-Owusu/lista
 
-go 1.27.0
+go 1.24.2
 
 require (
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/spf13/cobra v1.10.2
+	github.com/spf13/cobra v1.10.1
 )
 
 require (
@@ -32,5 +32,5 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 )
